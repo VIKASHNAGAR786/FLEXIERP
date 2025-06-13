@@ -17,8 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 //builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //    options.UseSqlServer(connectionString));
 builder.Services.AddTransient<IDataBaseOperation, DataBaseOperation>();
-//builder.Services.AddScoped<IAccountServices, AccountService>();
-//builder.Services.AddScoped<IAccountRepo, AccountRepo>();
+builder.Services.AddScoped<IAccountServices, AccountService>();
+builder.Services.AddScoped<IAccountRepo, AccountRepo>();
 
 
 builder.Services.AddControllers();

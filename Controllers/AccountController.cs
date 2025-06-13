@@ -71,7 +71,7 @@ namespace FLEXIERP.Controllers
 
             User1 registeredUser = await accouuntservice.Register(userToRegister);
 
-            User1? loggedInUser = await accouuntservice.Login(registeredUser?.Email, user.Password);
+            User1? loggedInUser = await accouuntservice.Login(registeredUser.Email, user.Password);
 
             if (loggedInUser != null)
             {
