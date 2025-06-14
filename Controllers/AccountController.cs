@@ -30,7 +30,7 @@ namespace FLEXIERP.Controllers
                 return BadRequest(new { message = "Password needs to entered" });
             }
 
-            User1? loggedInUser = await accouuntservice.Login(user.Email, user.Password);
+            User1? loggedInUser = await accouuntservice.Login(user.Email, user.UserName, user.Password);
 
             if (loggedInUser != null)
             {
@@ -45,33 +45,43 @@ namespace FLEXIERP.Controllers
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterUser user)
         {
-            if (String.IsNullOrEmpty(user.Name))
+            if (String.IsNullOrEmpty(user.FullName))
             {
                 return BadRequest(new { message = "Name needs to entered" });
             }
-            else if (String.IsNullOrEmpty(user.UserName))
+            else if (String.IsNullOrEmpty(user.Username))
             {
                 return BadRequest(new { message = "User name needs to entered" });
             }
-            else if (String.IsNullOrEmpty(user.Password))
+            else if (String.IsNullOrEmpty(user.PasswordHash))
             {
                 return BadRequest(new { message = "Password needs to entered" });
             }
 
-            //User1 userToRegister = new(0,user.UserName, user.Name, user.Password, user.Role.ToUpper(), user.Email);
-            User1 userToRegister = new User1();
-            userToRegister.Id = 0;
-            userToRegister.UserName = user.UserName;
-            userToRegister.Name = user.Name;
-            userToRegister.Password = user.Password;
-            userToRegister.Role = user.Role.ToUpper();
-            userToRegister.Email = user.Email;
-            userToRegister.CompanyName = user.CompanyName;
-            userToRegister.CompanyType = user.CompanyType;
+            // Fix for CS9035: Initialize all required members in the object initializer
+            User1 userToRegister = new User1
+            {
+                FullName = user.FullName,
+                Username = user.Username,
+                Email = user.Email,
+                PasswordHash = user.PasswordHash,
+                MobileNo = user.MobileNo,
+                Gender = user.Gender,
+                DateOfBirth = user.DateOfBirth,
+                Address = user.Address,
+                City = user.City,
+                State = user.State,
+                Country = user.Country,
+                ProfileImageUrl = user.ProfileImageUrl,
+                RoleID = user.RoleID,
+                LastLoginAt = DateTime.UtcNow,
+                IsActive = true,
+                IsEmailVerified = false
+            };
 
             User1 registeredUser = await accouuntservice.Register(userToRegister);
 
-            User1? loggedInUser = await accouuntservice.Login(registeredUser.Email, user.Password);
+            User1? loggedInUser = await accouuntservice.Login(registeredUser.Email,registeredUser.Username, user.PasswordHash);
 
             if (loggedInUser != null)
             {

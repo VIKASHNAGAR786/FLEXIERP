@@ -7,17 +7,24 @@
     {
         public class User1
         {
-            [Key]
-            public string? UserName { get; set; } = "";
-            public string? Name { get; set; } = "";
-            public string? Role { get; set; } = "FARMER";
-            public bool IsActive { get; set; } = false;
+            public required string FullName { get; set; }
+            public required string Username { get; set; }
+            public required string Email { get; set; }
+            public required string PasswordHash { get; set; }
+            public required string MobileNo { get; set; }
+            public string? Gender { get; set; }
+            public DateTime DateOfBirth { get; set; }
+            public string? Address { get; set; }
+            public string? City { get; set; }
+            public string? State { get; set; }
+            public string? Country { get; set; }
+            public string? ProfileImageUrl { get; set; }
+            public int RoleID { get; set; }
+            public DateTime LastLoginAt { get; set; }
+            public bool? IsActive { get; set; }
+            public bool? IsEmailVerified { get; set; }
             public string? Token { get; set; } = "";
-            public string? Password { get; set; } = "";
             public int Id { get; set; } = 0;
-            public string? Email { get; set; } = "";
-            public string? CompanyName { get; set; }
-            public string? CompanyType { get; set; }
 
 
             //public User() { }
@@ -36,19 +43,29 @@
 
         public class LoginUser
         {
-            public string Email { get; set; } = "";
-            public string Password { get; set; } = "";
+            public string? Email { get; set; }
+            public required string Password { get; set; }
+            public string? UserName { get; set; }
         }
 
         public class RegisterUser
         {
-            public string Name { get; set; } = "";
-            public string UserName { get; set; } = "";
-            public string Password { get; set; } = "";
-            public string Role { get; set; } = "Everyone";
-            public string Email { get; set; } = "";
-            public string? CompanyType { get; set; }
-            public string? CompanyName { get; set; }
+            public required string FullName { get; set; }
+            public required string Username { get; set; }
+            public required string Email { get; set; }
+            public required string PasswordHash { get; set; }
+            public required string MobileNo { get; set; }
+            public string? Gender { get; set; }
+            public DateTime DateOfBirth { get; set; }
+            public string? Address { get; set; }
+            public string? City { get; set; }
+            public string? State { get; set; }
+            public string? Country { get; set; }
+            public string? ProfileImageUrl { get; set; }
+            public int RoleID { get; set; }
+            public DateTime LastLoginAt { get; set; }
+            public bool? IsActive { get; set; }
+            public bool? IsEmailVerified { get; set; }
         }
 
         public class ProfileImageUploadDto

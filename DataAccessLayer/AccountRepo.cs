@@ -2,10 +2,10 @@
 using FLEXIERP.DATABASE;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,7 +16,7 @@ namespace FLEXIERP.DataAccessLayer
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<AccountRepo> _logger;
-        private readonly IDataBaseOperation sqlConnection; 
+        private readonly IDataBaseOperation sqlConnection;
 
         public AccountRepo(IConfiguration configuration, ILogger<AccountRepo> logger, IDataBaseOperation _sqlConnection)
         {
@@ -59,15 +59,37 @@ namespace FLEXIERP.DataAccessLayer
         }
 
         #endregion
-        public async Task<User1?> Login(string email, string password)
+
+        public async Task<User1?> Login(string? email, string? UserName, string password)
         {
             try
             {
                 await sqlConnection.GetConnection().OpenAsync();
                 var cmd = sqlConnection.GetConnection().CreateCommand();
-                cmd.CommandText = @"";
+                cmd.CommandText = @"SELECT 
+                                    UserID,
+                                    Username,
+                                    FullName,
+                                    Email,
+                                    PasswordHash,
+                                    RoleID,
+                                    IsActive,
+                                    MobileNo,
+                                    Gender,
+                                    DateOfBirth,
+                                    Address,
+                                    City,
+                                    State,
+                                    Country,
+                                    ProfileImageUrl,
+                                    LastLoginAt,
+                                    IsEmailVerified
+                                FROM Tbl_Users
+                                WHERE Username = @Username OR Email = @Email;
+";
                 cmd.CommandType = CommandType.Text;
-                cmd.Parameters.AddWithValue("@email", email);
+                cmd.Parameters.AddWithValue("@Email", email);
+                cmd.Parameters.AddWithValue("@Username", UserName);
 
                 var reader = await cmd.ExecuteReaderAsync();
                 var user = await GetUserFromReader(reader, password);
@@ -79,20 +101,38 @@ namespace FLEXIERP.DataAccessLayer
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var key = Encoding.ASCII.GetBytes(_configuration["JWT:SecretKey"]);
 
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.GivenName, user.FullName),
+                    new Claim(ClaimTypes.Role, user.RoleID.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                    new Claim("IsActive", user.IsActive?.ToString() ?? "null"),
+                    new Claim("MobileNo", user.MobileNo ?? string.Empty),
+                    new Claim("Gender", user.Gender ?? string.Empty),
+                    new Claim("DateOfBirth", user.DateOfBirth.ToString("yyyy-MM-dd")),
+                    new Claim("Address", user.Address ?? string.Empty),
+                    new Claim("City", user.City ?? string.Empty),
+                    new Claim("State", user.State ?? string.Empty),
+                    new Claim("Country", user.Country ?? string.Empty),
+                    new Claim("ProfileImageUrl", user.ProfileImageUrl ?? string.Empty),
+                    new Claim("LastLoginAt", user.LastLoginAt.ToString("o")), // ISO 8601 format
+                    new Claim("IsEmailVerified", user.IsEmailVerified?.ToString() ?? "null")
+                };
+
+
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
-                    Subject = new ClaimsIdentity(new[]
-                    {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim(ClaimTypes.GivenName, user.Name),
-                new Claim(ClaimTypes.Role, user.Role)
-            }),
+                    Subject = new ClaimsIdentity(claims),
                     Expires = DateTime.UtcNow.AddDays(7),
                     Issuer = _configuration["JWT:Issuer"],
                     Audience = _configuration["JWT:Audience"],
-                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                    SigningCredentials = new SigningCredentials(
+         new SymmetricSecurityKey(key),
+         SecurityAlgorithms.HmacSha256Signature)
                 };
+
 
                 var token = tokenHandler.CreateToken(tokenDescriptor);
                 user.Token = tokenHandler.WriteToken(token);
@@ -110,7 +150,7 @@ namespace FLEXIERP.DataAccessLayer
                 await sqlConnection.GetConnection().CloseAsync();
             }
         }
-        public async Task<User1?> GetUserFromReader(SqlDataReader reader, string plainPassword)
+        private async Task<User1?> GetUserFromReader(SqlDataReader reader, string plainPassword)
         {
             using (reader)
             {
@@ -118,95 +158,109 @@ namespace FLEXIERP.DataAccessLayer
                 {
                     if (await reader.ReadAsync())
                     {
-                        var hashedPassword = reader.GetString(reader.GetOrdinal("Password"));
+                        var hashedPassword = reader.GetString(reader.GetOrdinal("PasswordHash"));
 
                         // Use your password verification method here
                         bool isPasswordValid = VerifyPassword(plainPassword, hashedPassword);
                         if (!isPasswordValid)
-                            return null;
+                            throw new InvalidOperationException();
 
                         return new User1
                         {
-                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            UserName = reader.GetString(reader.GetOrdinal("UserName")),
-                            Name = reader.GetString(reader.GetOrdinal("Name")),
+                            Id = reader.GetInt32(reader.GetOrdinal("UserID")),
+                            Username = reader.GetString(reader.GetOrdinal("Username")),
+                            FullName = reader.GetString(reader.GetOrdinal("FullName")),
                             Email = reader.GetString(reader.GetOrdinal("Email")),
-                            Password = hashedPassword,
-                            Role = reader.GetString(reader.GetOrdinal("Role")),
-                            IsActive = false // Will be updated after token generation
+                            PasswordHash = hashedPassword,
+                            RoleID = reader.GetInt32(reader.GetOrdinal("RoleID")),
+                            IsActive = reader.IsDBNull(reader.GetOrdinal("IsActive"))
+                               ? null
+                               : reader.GetBoolean(reader.GetOrdinal("IsActive")),
+                            MobileNo = reader.IsDBNull(reader.GetOrdinal("MobileNo"))
+                               ? null
+                               : reader.GetString(reader.GetOrdinal("MobileNo")),
+                            Gender = reader.IsDBNull(reader.GetOrdinal("Gender"))
+                             ? null
+                             : reader.GetString(reader.GetOrdinal("Gender")),
+                            DateOfBirth = reader.GetDateTime(reader.GetOrdinal("DateOfBirth")),
+                            Address = reader.IsDBNull(reader.GetOrdinal("Address"))
+                              ? null
+                              : reader.GetString(reader.GetOrdinal("Address")),
+                            City = reader.IsDBNull(reader.GetOrdinal("City"))
+                           ? null
+                           : reader.GetString(reader.GetOrdinal("City")),
+                            State = reader.IsDBNull(reader.GetOrdinal("State"))
+                            ? null
+                            : reader.GetString(reader.GetOrdinal("State")),
+                            Country = reader.IsDBNull(reader.GetOrdinal("Country"))
+                              ? null
+                              : reader.GetString(reader.GetOrdinal("Country")),
+                            ProfileImageUrl = reader.IsDBNull(reader.GetOrdinal("ProfileImageUrl"))
+                                      ? null
+                                      : reader.GetString(reader.GetOrdinal("ProfileImageUrl")),
+                            LastLoginAt = reader.IsDBNull(reader.GetOrdinal("LastLoginAt"))
+                                  ? DateTime.Today
+                                  : reader.GetDateTime(reader.GetOrdinal("LastLoginAt")),
+                            IsEmailVerified = reader.IsDBNull(reader.GetOrdinal("IsEmailVerified"))
+                                      ? null
+                                      : reader.GetBoolean(reader.GetOrdinal("IsEmailVerified")),
+                            Token = null
                         };
                     }
+                    return null;
+
                 }
+                return null;
             }
-            return null;
         }
 
         public async Task<User1> Register(User1 user1)
         {
-            if (string.IsNullOrEmpty(user1.Password))
-                throw new ArgumentException("Password cannot be null or empty.", nameof(user1.Password));
+            if (string.IsNullOrEmpty(user1.PasswordHash))
+                throw new ArgumentException("Password cannot be null or empty.", nameof(user1.PasswordHash));
 
-            user1.Password = HashPassword(user1.Password);
+            user1.PasswordHash = HashPassword(user1.PasswordHash);
 
             try
             {
                 await sqlConnection.GetConnection().OpenAsync();
-
-                // Check for existing user
-                var checkCmd = sqlConnection.GetConnection().CreateCommand();
-                checkCmd.CommandText = "";
-                checkCmd.CommandType = CommandType.Text;
-                checkCmd.Parameters.AddWithValue("", user1.UserName);
-                checkCmd.Parameters.AddWithValue("", user1.Email);
-
-                var existingCount = (int)await checkCmd.ExecuteScalarAsync();
-                if (existingCount > 0)
-                    throw new Exception("");
-
                 // Insert new user
                 var insertCmd = sqlConnection.GetConnection().CreateCommand();
-                insertCmd.CommandText = @"
-            ";
-                insertCmd.CommandType = CommandType.Text;
+                insertCmd.CommandText = @"pro_Tbl_Users_insert";
+                insertCmd.CommandType = CommandType.StoredProcedure;
 
-                insertCmd.Parameters.AddWithValue("", user1.Name);
-                insertCmd.Parameters.AddWithValue("", user1.UserName);
-                insertCmd.Parameters.AddWithValue("", user1.Email);
-                insertCmd.Parameters.AddWithValue("", user1.Password);
-                insertCmd.Parameters.AddWithValue("", user1.Role);
-
-                var insertedUserId = (int)await insertCmd.ExecuteScalarAsync();
-
-                // Insert into role-specific table
-                if (user1.Role == "")
+               // insertCmd.Parameters.AddWithValue("@p_FullName", user1.FullName);
+                insertCmd.Parameters.Add(new SqlParameter
                 {
-                    var farmerCmd = sqlConnection.GetConnection().CreateCommand();
-                    farmerCmd.CommandText = @"
-               ";
-                    farmerCmd.CommandType = CommandType.Text;
+                    ParameterName = "@p_FullName",
+                    SqlDbType = SqlDbType.VarChar,
+                    SqlValue = user1.FullName,
+                    Direction = ParameterDirection.Input,
+                });
+                insertCmd.Parameters.AddWithValue("@p_Username", user1.Username);
+                insertCmd.Parameters.AddWithValue("@p_Email", user1.Email);
+                insertCmd.Parameters.AddWithValue("@p_PasswordHash", user1.PasswordHash);
+                insertCmd.Parameters.AddWithValue("@p_MobileNo", user1.MobileNo);
+                insertCmd.Parameters.AddWithValue("@p_Gender", user1.Gender);
+                insertCmd.Parameters.AddWithValue("@p_DateOfBirth", user1.DateOfBirth);
+                insertCmd.Parameters.AddWithValue("@p_Address", user1.Address);
+                insertCmd.Parameters.AddWithValue("@p_City", user1.City);
+                insertCmd.Parameters.AddWithValue("@p_State", user1.Username);
+                insertCmd.Parameters.AddWithValue("@p_Country", user1.Country);
+                insertCmd.Parameters.AddWithValue("@p_ProfileImageUrl", user1.ProfileImageUrl);
+                insertCmd.Parameters.AddWithValue("@p_RoleID ", user1.RoleID);
+                insertCmd.Parameters.AddWithValue("@p_LastLoginAt", user1.LastLoginAt);
+                insertCmd.Parameters.AddWithValue("@p_IsActive", user1.IsActive);
+                insertCmd.Parameters.AddWithValue("@p_IsEmailVerified", user1.IsEmailVerified);
 
-                    farmerCmd.Parameters.AddWithValue("", insertedUserId);
-                    farmerCmd.Parameters.AddWithValue("", user1.Name);
-                    farmerCmd.Parameters.AddWithValue("", user1.Email);
-                    farmerCmd.Parameters.AddWithValue("", insertedUserId);
 
-                    await farmerCmd.ExecuteNonQueryAsync();
-                }
-                else if (user1.Role == "")
+                int insertedUserId = await insertCmd.ExecuteNonQueryAsync();
+                if (insertedUserId <= 0)
                 {
-                    var buyerCmd = sqlConnection.GetConnection().CreateCommand();
-                    buyerCmd.CommandText = @"";
-                    buyerCmd.CommandType = CommandType.Text;
-
-                    buyerCmd.Parameters.AddWithValue("", insertedUserId);
-                    buyerCmd.Parameters.AddWithValue("", user1.CompanyName);
-                    buyerCmd.Parameters.AddWithValue("", user1.CompanyName); 
-
-                    await buyerCmd.ExecuteNonQueryAsync();
+                    throw new Exception("User registration failed. Please try again.");
                 }
-
-                user1.Id = insertedUserId;
                 return user1;
+
             }
             catch (Exception ex)
             {
