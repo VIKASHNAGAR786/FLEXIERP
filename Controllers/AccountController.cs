@@ -17,7 +17,6 @@ namespace FLEXIERP.Controllers
 
         #region Accounts Operations
         // POST: auth/login
-        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginUser user)
         {
@@ -41,7 +40,6 @@ namespace FLEXIERP.Controllers
         }
 
         // POST: auth/register
-        [AllowAnonymous]
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterUser user)
         {
