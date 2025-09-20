@@ -213,7 +213,6 @@ namespace FLEXIERP.DataAccessLayer
                 return null;
             }
         }
-
         public async Task<User1> Register(User1 user1)
         {
             if (string.IsNullOrEmpty(user1.PasswordHash))
@@ -262,7 +261,7 @@ namespace FLEXIERP.DataAccessLayer
                 return user1;
 
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
                 _logger.LogError($"Error during user registration: {ex.Message}");
                 throw new Exception("User registration failed. Please try again later.");

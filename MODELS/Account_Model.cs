@@ -25,20 +25,7 @@
             public bool? IsEmailVerified { get; set; }
             public string? Token { get; set; } = "";
             public int Id { get; set; } = 0;
-
-
-            //public User() { }
-
-            //public User1(int id,string? userName, string? name, string? password, string? role, string? email)
-            //{
-            //    //Email = email;
-            //    Id = id;
-            //    UserName = userName;
-            //    Name = name;
-            //    Password = password;
-            //    Role = role;
-            //    Email = email;
-            //}
+            
         }
 
         public class LoginUser

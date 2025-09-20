@@ -17,29 +17,40 @@ namespace FLEXIERP.Controllers
 
         #region Accounts Operations
         // POST: auth/login
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginUser user)
         {
-            if (String.IsNullOrEmpty(user.Email))
+            try
             {
-                return BadRequest(new { message = "Email address needs to entered" });
+                if (string.IsNullOrEmpty(user.Email))
+                {
+                    return BadRequest(new { message = "Email address needs to be entered" });
+                }
+                else if (string.IsNullOrEmpty(user.Password))
+                {
+                    return BadRequest(new { message = "Password needs to be entered" });
+                }
+
+                User1? loggedInUser = await accouuntservice.Login(user.Email, user.UserName, user.Password);
+
+                if (loggedInUser != null)
+                {
+                    return Ok(loggedInUser);
+                }
+
+                return BadRequest(new { message = "Invalid login credentials" });
             }
-            else if (String.IsNullOrEmpty(user.Password))
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Password needs to entered" });
+                // log the error here (e.g., using ILogger or any logging framework)
+                return StatusCode(500, new { message = "An unexpected error occurred.", details = ex.Message });
             }
-
-            User1? loggedInUser = await accouuntservice.Login(user.Email, user.UserName, user.Password);
-
-            if (loggedInUser != null)
-            {
-                return Ok(loggedInUser);
-            }
-
-            return BadRequest(new { message = "User login unsuccessful" });
         }
 
+
         // POST: auth/register
+        [AllowAnonymous]
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterUser user)
         {
