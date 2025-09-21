@@ -14,6 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddTransient<IDataBaseOperation, DataBaseOperation>();
 builder.Services.AddScoped<IAccountServices, AccountService>();
 builder.Services.AddScoped<IAccountRepo, AccountRepo>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IInventoryRepo, InventoryRepo>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -26,12 +28,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll", policy =>
     {
         policy
-           .WithOrigins(
-                "http://localhost:4200",
-                "http://localhost:4200/",
-                "https://gray-mud-030733100.6.azurestaticapps.net",
-                "https://gray-mud-030733100.6.azurestaticapps.net/"
-            )
+            .SetIsOriginAllowed(_ => true) // allow any origin (useful for Tauri)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
