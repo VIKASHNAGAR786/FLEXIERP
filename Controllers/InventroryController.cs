@@ -2,6 +2,7 @@
 using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS;
+using FLEXIERP.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FLEXIERP.Controllers
@@ -27,6 +28,11 @@ namespace FLEXIERP.Controllers
 
             try
             {
+                int? userid = User.GetUserId();
+                if(userid == null)
+                    return Unauthorized("User ID not found in token.");
+                category.CreatedBy = userid.Value;
+
                 var addedCategory = await inventoryService.AddCategory(category);
                 return Ok(addedCategory);
             }
