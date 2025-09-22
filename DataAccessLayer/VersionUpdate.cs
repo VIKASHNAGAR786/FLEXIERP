@@ -195,6 +195,72 @@ namespace FLEXIERP.DataAccessLayer
                             
                         ";
                                 await cmd4.ExecuteNonQueryAsync();
+
+                                var cmd5 = connection.CreateCommand();
+                                cmd5.Transaction = transaction;
+                                cmd5.CommandText = @"
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'flexi_erp_product_category')
+                BEGIN
+                    CREATE TABLE flexi_erp_product_category (
+                        CategoryID INT IDENTITY(1,1) PRIMARY KEY,
+                        CategoryName VARCHAR(100) NOT NULL,
+                        Description VARCHAR(MAX) NULL,
+                        Status BIT NOT NULL DEFAULT 1,
+                        CreatedBy INT NOT NULL,
+                        UpdatedBy INT NULL,
+                        CreatedDate DATETIME NOT NULL DEFAULT GETDATE(),
+                        UpdatedDate DATETIME NULL,
+                        CONSTRAINT FK_flexi_erp_product_category_CreatedBy FOREIGN KEY (CreatedBy)
+                            REFERENCES Tbl_Users(UserID),
+                        CONSTRAINT FK_flexi_erp_product_category_UpdatedBy FOREIGN KEY (UpdatedBy)
+                            REFERENCES Tbl_Users(UserID)
+                    );
+                END
+            ";
+                                await cmd5.ExecuteNonQueryAsync();
+
+                                var cmd6 = connection.CreateCommand();
+                                cmd6.Transaction = transaction;
+                                cmd6.CommandText = @"
+                CREATE OR ALTER PROCEDURE usp_Category_insert
+                    @CategoryName VARCHAR(100),
+                    @Description VARCHAR(MAX) = NULL,
+                    @CreatedBy INT
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+
+                    INSERT INTO flexi_erp_product_category (CategoryName, Description, CreatedBy, CreatedDate)
+                    VALUES (@CategoryName, @Description, @CreatedBy, GETDATE());
+
+                    SELECT SCOPE_IDENTITY() AS NewCategoryID;
+                END
+            ";
+                                await cmd6.ExecuteNonQueryAsync();
+
+                                var cmd7 = connection.CreateCommand();
+                                cmd7.Transaction = transaction;
+                                cmd7.CommandText = @"
+                CREATE OR ALTER PROCEDURE Get_Categories
+                    @OnlyActive BIT = 0
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+
+                    IF @OnlyActive = 1
+                    BEGIN
+                        SELECT CategoryID, CategoryName, Description 
+                        FROM flexi_erp_product_category
+                        WHERE Status = 1;
+                    END
+                    ELSE
+                    BEGIN
+                        SELECT * 
+                        FROM flexi_erp_product_category;
+                    END
+                END
+            ";
+                                await cmd7.ExecuteNonQueryAsync();
                             }
 
                             // All commands executed successfully
