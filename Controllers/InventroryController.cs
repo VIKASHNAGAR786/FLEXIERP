@@ -3,6 +3,7 @@ using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS;
 using FLEXIERP.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FLEXIERP.Controllers
@@ -56,7 +57,62 @@ namespace FLEXIERP.Controllers
                 // Log ex.Message if needed
                 return StatusCode(500, ex.Message);
             }
-        } 
+        }
         #endregion
+
+        #region Save Product
+        [AllowAnonymous]
+        [HttpPost("AddProduct")]
+        public async Task<ActionResult<Product_Category>> AddProduct([FromBody] ProductModel productModel)
+        {
+            if (productModel == null)
+                return BadRequest("Category data is required.");
+
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                productModel.CreatedBy = userid.Value;
+
+                var addedCategory = await inventoryService.AddProduct(productModel);
+                return Ok(addedCategory);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
+        #region Get Products
+        [AllowAnonymous]
+        [HttpGet("GetProducts")]
+        public async Task<ActionResult<IEnumerable<Product_DTO>>> GetProducts([FromQuery] PaginationFilter filter)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var addedCategory = await inventoryService.GetProducts(filter);
+                return Ok(addedCategory);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
+        [HttpGet("sample")]
+        public IActionResult GetSamplePdf()
+        {
+            var pdfBytes = inventoryService.GenerateSamplePdf();
+            return File(pdfBytes, "application/pdf", "SampleReport.pdf");
+        }
     }
 }

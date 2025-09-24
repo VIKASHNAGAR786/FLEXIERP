@@ -4,6 +4,7 @@ using FLEXIERP.MODELS;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using System.Data.Common;
 
 namespace FLEXIERP.DataAccessLayer
 {
@@ -109,7 +110,122 @@ namespace FLEXIERP.DataAccessLayer
             }
 
             return categories;
-        } 
+        }
+        #endregion
+
+        #region add product
+        public async Task<string> AddProduct(ProductModel product)
+        {
+            try
+            {
+                var connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "usp_Insert_Product";
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    // Add parameters
+                    cmd.Parameters.Add(new SqlParameter("@ProductName", SqlDbType.NVarChar, 100) { Value = product.ProductName });
+                    cmd.Parameters.Add(new SqlParameter("@ProductCategory", SqlDbType.Int) { Value = product.ProductCategory });
+                    cmd.Parameters.Add(new SqlParameter("@ProductType", SqlDbType.NVarChar, 100) { Value = (object)product.ProductType ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@PackedDate", SqlDbType.Date) { Value = (object)product.PackedDate ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@PackedWeight", SqlDbType.Int) { Value = (object)product.PackedWeight ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@PackedHeight", SqlDbType.Int) { Value = (object)product.PackedHeight ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@PackedDepth", SqlDbType.Int) { Value = (object)product.PackedDepth ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@PackedWidth", SqlDbType.Int) { Value = (object)product.PackedWidth ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@IsPerishable", SqlDbType.Bit) { Value = (object)product.IsPerishable ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@CreatedBy", SqlDbType.Int) { Value = product.CreatedBy });
+                    cmd.Parameters.Add(new SqlParameter("@PurchasePrice", SqlDbType.Decimal) { Value = (object)product.PurchasePrice ?? DBNull.Value, Precision = 18, Scale = 2 });
+                    cmd.Parameters.Add(new SqlParameter("@SellingPrice", SqlDbType.Decimal) { Value = (object)product.SellingPrice ?? DBNull.Value, Precision = 18, Scale = 2 });
+                    cmd.Parameters.Add(new SqlParameter("@TaxRate", SqlDbType.Decimal) { Value = (object)product.TaxRate ?? DBNull.Value, Precision = 18, Scale = 2 });
+                    cmd.Parameters.Add(new SqlParameter("@Discount", SqlDbType.Decimal) { Value = (object)product.Discount ?? DBNull.Value, Precision = 18, Scale = 2 });
+
+                    // Execute and get the generated barcode
+                    var result = await cmd.ExecuteScalarAsync();
+                    if (result == null || string.IsNullOrEmpty(result.ToString()))
+                    {
+                        throw new Exception("Product insertion failed. Please try again.");
+                    }
+
+                    return result.ToString(); // Returns the GeneratedBarCode
+                }
+            }
+            catch (SqlException ex)
+            {
+                // Log ex.Message if needed
+                throw new Exception("Product insertion failed. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlconnection.GetConnection().CloseAsync();
+            }
+        }
+        #endregion
+
+        #region get product
+        public async Task<IEnumerable<Product_DTO>> GetProducts(PaginationFilter filter)
+        {
+            var products = new List<Product_DTO>();
+
+            try
+            {
+                using var connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_GetProducts";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.Date)
+                { Value = string.IsNullOrEmpty(filter.StartDate) ? DBNull.Value : filter.StartDate });
+                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.Date)
+                { Value = string.IsNullOrEmpty(filter.EndDate) ? DBNull.Value : filter.EndDate });
+                cmd.Parameters.Add(new SqlParameter("@SearchTerm", SqlDbType.NVarChar, 100)
+                { Value = string.IsNullOrEmpty(filter.SearchTerm) ? DBNull.Value : filter.SearchTerm });
+                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = filter.PageNo });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = filter.PageSize });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    products.Add(new Product_DTO
+                    {
+                        ProductID = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        ProductCode = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        BarCode = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        ProductName = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        CategoryName = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        ProductType = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
+                        PackedDate = !reader.IsDBNull(6) ? reader.GetDateTime(6) : null,
+                        PackedWeight = !reader.IsDBNull(7) ? reader.GetInt32(7) : null,
+                        PackedHeight = !reader.IsDBNull(8) ? reader.GetInt32(8) : null,
+                        PackedDepth = !reader.IsDBNull(9) ? reader.GetInt32(9) : null,
+                        PackedWidth = !reader.IsDBNull(10) ? reader.GetInt32(10) : null,
+                        IsPerishable = !reader.IsDBNull(11) ? reader.GetBoolean(11) : null,
+                        CreatedDate = !reader.IsDBNull(12) ? reader.GetDateTime(12) : null,
+                        PurchasePrice = !reader.IsDBNull(13) ? reader.GetDecimal(13) : null,
+                        SellingPrice = !reader.IsDBNull(14) ? reader.GetDecimal(14) : null,
+                        TaxRate = !reader.IsDBNull(15) ? reader.GetDecimal(15) : null,
+                        Discount = !reader.IsDBNull(16) ? reader.GetDecimal(16) : null,
+                        FullName = !reader.IsDBNull(17) ? reader.GetString(17) : string.Empty,
+                        TotalRecords = !reader.IsDBNull(18) ? reader.GetInt32(18) : 0
+                    });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve products. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlconnection.GetConnection().CloseAsync();
+            }
+
+            return products;
+        }
+
         #endregion
     }
 }
