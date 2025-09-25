@@ -28,8 +28,8 @@
 
     public class PaginationFilter
     {
-        public string? StartDate { get; set; }
-        public string? EndDate { get; set; }
+        public string StartDate { get; set; } = DateTime.UtcNow.ToString();
+        public string EndDate { get; set; } = DateTime.UtcNow.ToString();
         public string? SearchTerm { get; set; }
         public int PageNo { get; set; } = 1;
         public int PageSize { get; set; } = 10;

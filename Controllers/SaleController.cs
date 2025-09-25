@@ -47,12 +47,33 @@ namespace FLEXIERP.Controllers
         {
             try
             {
-                int? userid = 2;//User.GetUserId();
+                int? userid = User.GetUserId();
                 sale.CreatedBy = userid;
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
                 var result = await _saleService.InsertSaleAsync(sale);
                 return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
+        #region Get Sale
+        [AllowAnonymous]
+        [HttpGet("GetSales")]
+        public async Task<ActionResult<List<Sale_DTO>>> GetSales([FromQuery] PaginationFilter pagination)
+        {
+            try
+            {
+                int? userid = 2;//User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                var sales = await _saleService.GetSalesAsync(pagination);
+                return Ok(sales);
             }
             catch (Exception ex)
             {

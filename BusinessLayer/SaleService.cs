@@ -26,5 +26,12 @@ namespace FLEXIERP.BusinessLayer
             return await _saleRepo.InsertSaleAsync(sale);
         }
         #endregion
+
+        #region Get Sale
+        public async Task<List<Sale_DTO>> GetSalesAsync(PaginationFilter pagination)
+        {
+            return await _saleRepo.GetSalesAsync(pagination);
+        }
+        #endregion
     }
 }

@@ -20,4 +20,18 @@
         public decimal? Discount { get; set; }
     }
 
+    public class Sale_DTO
+    {
+        public int SrNo { get; set; }
+        public int SaleID { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public int TotalItems { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal TotalDiscount { get; set; }
+        public DateTime OrderDate { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public int TotalRows { get; set; }
+    }
+
+
 }

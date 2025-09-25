@@ -195,5 +195,56 @@ namespace FLEXIERP.DataAccessLayer
         }
 
         #endregion
+
+        #region Get Sale
+        public async Task<List<Sale_DTO>> GetSalesAsync(PaginationFilter pagination)
+        {
+            var salesList = new List<Sale_DTO>();
+
+            try
+            {
+                using var connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_GetSales";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new SqlParameter("@Page", SqlDbType.Int) { Value = pagination.PageNo });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pagination.PageSize });
+                cmd.Parameters.Add(new SqlParameter("@Search", SqlDbType.NVarChar, 100) { Value = (object?)pagination.SearchTerm ?? DBNull.Value });
+                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.Date) { Value = pagination.StartDate });
+                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.Date) { Value = pagination.EndDate });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    salesList.Add(new Sale_DTO
+                    {
+                        SrNo = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        SaleID = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
+                        CustomerName = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        TotalItems = !reader.IsDBNull(3) ? reader.GetInt32(3) : 0,
+                        TotalAmount = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0,
+                        TotalDiscount = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0,
+                        OrderDate = !reader.IsDBNull(6) ? reader.GetDateTime(6) : DateTime.MinValue,
+                        FullName = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
+                        TotalRows = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0
+                    });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve sales. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlconnection.GetConnection().CloseAsync();
+            }
+
+            return salesList;
+        }
+
+        #endregion
     }
 }
