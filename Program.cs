@@ -16,6 +16,8 @@ builder.Services.AddScoped<IAccountServices, AccountService>();
 builder.Services.AddScoped<IAccountRepo, AccountRepo>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IInventoryRepo, InventoryRepo>();
+builder.Services.AddScoped<ISaleRepo, SaleRepo>();
+builder.Services.AddScoped<ISaleService, SaleService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

@@ -20,9 +20,4 @@
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.1" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Folder Include="MODELS\" />
-		<Folder Include="DTOs\" />
-	</ItemGroup>
-
 </Project>
