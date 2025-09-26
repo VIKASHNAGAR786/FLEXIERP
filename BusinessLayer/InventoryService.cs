@@ -1,7 +1,10 @@
 ﻿using FLEXIERP.BusinesLayer_Interfaces;
+using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS;
 using SelectPdf;
+using ClosedXML.Excel;
+using System.Drawing;
 
 namespace FLEXIERP.BusinessLayer
 {
@@ -149,8 +152,116 @@ namespace FLEXIERP.BusinessLayer
             return stream.ToArray();
         }
 
+        public async Task<byte[]> GetProductReportExcel(PaginationFilter filter)
+        {
+            // Get product data
+            IEnumerable<Product_DTO> products = await inventoryRepo.GetProducts(filter);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Product Report");
+
+            int currentRow = 1;
+
+            // --- Company Header ---
+            worksheet.Cell(currentRow, 1).Value = "FLEXIERP Pvt. Ltd.";
+            worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
+            worksheet.Cell(currentRow, 1).Style.Font.FontSize = 22;
+            worksheet.Range(currentRow, 1, currentRow, 19).Merge();
+            worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            currentRow++;
+
+            worksheet.Cell(currentRow, 1).Value = "123 Business Street, City, Country";
+            worksheet.Range(currentRow, 1, currentRow, 19).Merge();
+            worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            currentRow++;
+
+            worksheet.Cell(currentRow, 1).Value = "Phone: +91-1234567890 | Email: info@flexierp.com";
+            worksheet.Range(currentRow, 1, currentRow, 19).Merge();
+            worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            currentRow += 2;
+
+            worksheet.Cell(currentRow, 1).Value = "Product Table Report";
+            worksheet.Range(currentRow, 1, currentRow, 19).Merge();
+            worksheet.Cell(currentRow, 1).Style.Fill.BackgroundColor = XLColor.DeepSkyBlue;
+            worksheet.Cell(currentRow, 1).Style.Font.FontColor = XLColor.White;
+            worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
+            worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            worksheet.Cell(currentRow, 1).Style.Font.FontSize = 14;
+            currentRow++;
+
+            // --- Table Header ---
+            string[] headers = new string[]
+            {
+        "SrNo","ProductCode","BarCode","ProductName","CategoryName","ProductType",
+        "PackedDate","PackedWeight","PackedHeight","PackedDepth","PackedWidth",
+        "IsPerishable","CreatedDate","PurchasePrice","SellingPrice","TaxRate",
+        "Discount","FullName","TotalRecords"
+            };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                worksheet.Cell(currentRow, i + 1).Value = headers[i];
+                worksheet.Cell(currentRow, i + 1).Style.Fill.BackgroundColor = XLColor.DeepSkyBlue;
+                worksheet.Cell(currentRow, i + 1).Style.Font.FontColor = XLColor.White;
+                worksheet.Cell(currentRow, i + 1).Style.Font.Bold = true;
+                worksheet.Cell(currentRow, i + 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(currentRow, i + 1).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                worksheet.Cell(currentRow, i + 1).Style.Border.OutsideBorderColor = XLColor.Black;
+            }
+
+            currentRow++;
+
+            // --- Table Data ---
+            int srno = 1;
+            foreach (var p in products)
+            {
+                string isprisnable = "";
+                if (p.IsPerishable != null)
+                {
+                    isprisnable = (bool)p.IsPerishable ? "YES" : "NO";
+                }
+
+                worksheet.Cell(currentRow, 1).Value = srno;
+                worksheet.Cell(currentRow, 2).Value = p.ProductCode;
+                worksheet.Cell(currentRow, 3).Value = p.BarCode;
+                worksheet.Cell(currentRow, 4).Value = p.ProductName;
+                worksheet.Cell(currentRow, 5).Value = p.CategoryName;
+                worksheet.Cell(currentRow, 6).Value = p.ProductType;
+                worksheet.Cell(currentRow, 7).Value = p.PackedDate;
+                worksheet.Cell(currentRow, 8).Value = p.PackedWeight;
+                worksheet.Cell(currentRow, 9).Value = p.PackedHeight;
+                worksheet.Cell(currentRow, 10).Value = p.PackedDepth;
+                worksheet.Cell(currentRow, 11).Value = p.PackedWidth;
+                worksheet.Cell(currentRow, 12).Value = isprisnable;
+                worksheet.Cell(currentRow, 13).Value = p.CreatedDate;
+                worksheet.Cell(currentRow, 14).Value = p.PurchasePrice;
+                worksheet.Cell(currentRow, 15).Value = p.SellingPrice;
+                worksheet.Cell(currentRow, 16).Value = p.TaxRate;
+                worksheet.Cell(currentRow, 17).Value = p.Discount;
+                worksheet.Cell(currentRow, 18).Value = p.FullName;
+                worksheet.Cell(currentRow, 19).Value = p.TotalRecords;
+
+                // Zebra stripe effect
+                if (srno % 2 == 0)
+                {
+                    worksheet.Range(currentRow, 1, currentRow, 19).Style.Fill.BackgroundColor = XLColor.LightCyan;
+                }
+
+                currentRow++;
+                srno++;
+            }
+
+            // --- Adjust column widths ---
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
+
+
         #endregion
 
-       
+
     }
 }

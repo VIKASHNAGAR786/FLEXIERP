@@ -1,4 +1,5 @@
 ﻿using FLEXIERP.BusinesLayer_Interfaces;
+using FLEXIERP.BusinessLayer;
 using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS;
@@ -123,6 +124,23 @@ namespace FLEXIERP.Controllers
             {
                 return StatusCode(500, ex.Message);
             }
+        }
+
+        [HttpGet("GetProductReportExcel")]
+        public async Task<IActionResult> ExportProductReportExcel([FromQuery] PaginationFilter filter)
+        {
+            int? userid = User.GetUserId();
+            if (userid == null)
+                return Unauthorized("User ID not found in token.");
+            // Call service to get Excel file bytes
+            byte[] fileBytes = await inventoryService.GetProductReportExcel(filter);
+
+            if (fileBytes == null || fileBytes.Length == 0)
+                return NotFound("No data found for the given filter.");
+
+            // Return as downloadable file
+            string fileName = "ProductReport.xlsx";
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
         #endregion
 
