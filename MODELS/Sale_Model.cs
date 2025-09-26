@@ -11,13 +11,12 @@
     public class SaleDetail
     {
         public int ProductID { get; set; }
-        public int? CreatedBy { get; set; }
     }
 
     public class Sale
     {
         public int? CustomerID { get; set; } // Nullable if new customer
-        public Customer Customer { get; set; }  // Optional
+        public Customer? Customer { get; set; }  // Optional
         public decimal TotalItems { get; set; }
         public decimal TotalAmount { get; set; }
         public decimal TotalDiscount { get; set; }

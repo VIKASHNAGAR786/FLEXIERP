@@ -33,5 +33,19 @@ namespace FLEXIERP.BusinessLayer
             return await _saleRepo.GetSalesAsync(pagination);
         }
         #endregion
+
+        #region Old customer 
+        public Task<List<OldCustomerDTO>> GetOldCustomersAsync(PaginationFilter pagination)
+        {
+            return _saleRepo.GetOldCustomersAsync(pagination);
+        }
+        #endregion
+
+        #region Get Customer with sales 
+        public  async Task<List<CustomerWithSalesDTO>> GetCustomersWithSalesAsync(PaginationFilter pagination)
+        {
+            return await _saleRepo.GetCustomersWithSalesAsync(pagination);
+        }
+        #endregion
     }
 }

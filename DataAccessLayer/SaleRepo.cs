@@ -16,6 +16,21 @@ namespace FLEXIERP.DataAccessLayer
             sqlconnection = _sqlconnection;
         }
 
+        #region common
+        private string GetPaymentModeString(int mode)
+        {
+            return mode switch
+            {
+                1 => "Cash",
+                2 => "UPI",
+                3 => "Card",
+                4 => "Other",
+                _ => "Unknown"
+            };
+        }
+
+        #endregion
+
         #region Product By Barcode
         public async Task<ProductByBarcode_DTO?> GetProductByBarcode(string barCode)
         {
@@ -170,7 +185,7 @@ namespace FLEXIERP.DataAccessLayer
 
                 foreach (var detail in sale.SaleDetails)
                 {
-                    tvp.Rows.Add(detail.ProductID, detail.CreatedBy ?? (object)DBNull.Value);
+                    tvp.Rows.Add(detail.ProductID, sale.CreatedBy ?? (object)DBNull.Value);
                 }
 
                 var tvpParam = cmd.Parameters.AddWithValue("@SaleDetails", tvp);
@@ -243,6 +258,113 @@ namespace FLEXIERP.DataAccessLayer
             }
 
             return salesList;
+        }
+
+        #endregion
+
+        #region Old customer 
+        public async Task<List<OldCustomerDTO>> GetOldCustomersAsync(PaginationFilter pagination)
+        {
+            var customers = new List<OldCustomerDTO>();
+
+            try
+            {
+                using var connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_sale_old_Get_Customers";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new SqlParameter("@SearchTerm", SqlDbType.NVarChar, 100)
+                {
+                    Value = (object?)pagination.SearchTerm ?? DBNull.Value
+                });
+                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pagination.PageNo });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pagination.PageSize });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    customers.Add(new OldCustomerDTO
+                    {
+                        SrNo = !reader.IsDBNull(0) ? reader.GetInt64(0) : 0,
+                        CustomerID = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
+                        CustomerName = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        PhoneNo = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        Email = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        Remark = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
+                        TotalRecords = !reader.IsDBNull(6) ? reader.GetInt32(6) : 0
+                    });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve old customers. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlconnection.GetConnection().CloseAsync();
+            }
+
+            return customers;
+        }
+
+        #endregion
+
+        #region Get Customer with sales 
+        public async Task<List<CustomerWithSalesDTO>> GetCustomersWithSalesAsync(PaginationFilter pagination)
+        {
+            var customers = new List<CustomerWithSalesDTO>();
+
+            try
+            {
+                using var connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_Get_Customers_WithSales";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new SqlParameter("@SearchTerm", SqlDbType.NVarChar, 100)
+                {
+                    Value = (object?)pagination.SearchTerm ?? DBNull.Value
+                });
+                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.Date) { Value = pagination.StartDate });
+                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.Date) { Value = pagination.EndDate});
+                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pagination.PageNo });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pagination.PageSize });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    customers.Add(new CustomerWithSalesDTO
+                    {
+                        SrNo = !reader.IsDBNull(0) ? reader.GetInt64(0) : 0,
+                        CustomerID = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
+                        CustomerName = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        CustomerAddress = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        PhoneNo = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        Email = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
+                        TotalItems = !reader.IsDBNull(6) ? reader.GetDecimal(6) : 0,
+                        PaymentMode = !reader.IsDBNull(7) ? this.GetPaymentModeString(reader.GetInt32(7)) : string.Empty,
+                        Remark = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
+                        CreatedDate = !reader.IsDBNull(9) ? reader.GetDateTime(9) : DateTime.MinValue,
+                        FullName = !reader.IsDBNull(10) ? reader.GetString(10) : string.Empty,
+                        TotalRecords = !reader.IsDBNull(11) ? reader.GetInt32(11) : 0
+                    });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve customers with sales. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlconnection.GetConnection().CloseAsync();
+            }
+
+            return customers;
         }
 
         #endregion

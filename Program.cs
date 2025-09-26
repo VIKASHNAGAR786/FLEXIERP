@@ -86,5 +86,6 @@ app.Run();
 
 
 
-//dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile = true
+//dotnet publish -c Release -r win-x64 /p:PublishSingleFile=true /p:SelfContained=true
+
 

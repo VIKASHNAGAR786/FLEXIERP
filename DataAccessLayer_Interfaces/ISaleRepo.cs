@@ -17,5 +17,14 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<List<Sale_DTO>> GetSalesAsync(PaginationFilter pagination);
         #endregion
 
+        #region Old customer 
+        public Task<List<OldCustomerDTO>> GetOldCustomersAsync(PaginationFilter pagination);
+        #endregion
+
+        #region Get Customer with sales 
+        public Task<List<CustomerWithSalesDTO>> GetCustomersWithSalesAsync(PaginationFilter pagination);
+
+        #endregion
+
     }
 }

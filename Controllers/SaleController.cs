@@ -63,17 +63,57 @@ namespace FLEXIERP.Controllers
         #endregion
 
         #region Get Sale
-        [AllowAnonymous]
         [HttpGet("GetSales")]
         public async Task<ActionResult<List<Sale_DTO>>> GetSales([FromQuery] PaginationFilter pagination)
         {
             try
             {
-                int? userid = 2;//User.GetUserId();
+                int? userid = User.GetUserId();
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
                 var sales = await _saleService.GetSalesAsync(pagination);
                 return Ok(sales);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
+        #region Old customer 
+        [AllowAnonymous]
+        [HttpGet("GetOldCustomers")]
+        public async Task<ActionResult<List<OldCustomerDTO>>> GetOldCustomers([FromQuery] PaginationFilter pagination)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                var oldCustomers = await _saleService.GetOldCustomersAsync(pagination);
+                return Ok(oldCustomers);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
+        #region Get Customer with sales 
+        [HttpGet("GetCustomersWithSales")]
+        public async Task<ActionResult<List<CustomerWithSalesDTO>>> GetCustomersWithSales([FromQuery] PaginationFilter pagination)
+        {
+            try
+            {
+                int? userid = 1;//User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                var customersWithSales = await _saleService.GetCustomersWithSalesAsync(pagination);
+                return Ok(customersWithSales);
             }
             catch (Exception ex)
             {
