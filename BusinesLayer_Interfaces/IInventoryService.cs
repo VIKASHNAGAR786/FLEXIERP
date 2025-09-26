@@ -10,8 +10,7 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         #region Save prodcut
         public Task<string> AddProduct(ProductModel product);
         public Task<IEnumerable<Product_DTO>> GetProducts(PaginationFilter filter);
+        public Task<byte[]> GetProductReportPdf(PaginationFilter filter);
         #endregion
-
-        public byte[] GenerateSamplePdf();
     }
 }

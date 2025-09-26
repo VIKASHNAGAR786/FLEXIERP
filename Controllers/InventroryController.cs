@@ -106,13 +106,26 @@ namespace FLEXIERP.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        [HttpGet("GetProductReportPdf")]
+        public async Task<IActionResult> GetProductReportPdf([FromQuery]PaginationFilter filter)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var pdfBytes = await inventoryService.GetProductReportPdf(filter);
+                return File(pdfBytes, "application/pdf", "SampleReport.pdf");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
         #endregion
 
-        [HttpGet("sample")]
-        public IActionResult GetSamplePdf()
-        {
-            var pdfBytes = inventoryService.GenerateSamplePdf();
-            return File(pdfBytes, "application/pdf", "SampleReport.pdf");
-        }
+
     }
 }
