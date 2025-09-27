@@ -337,5 +337,96 @@ namespace FLEXIERP.DataAccessLayer
         }
 
         #endregion
+
+        #region Warehouse Work
+        public async Task<int> AddWarehouse(WarehouseModel warehouse)
+        {
+            SqlConnection connection = null;
+            try
+            {
+                connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "usp_Insert_Warehouse";
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    // Input parameters
+                    cmd.Parameters.Add(new SqlParameter("@WarehouseName", SqlDbType.NVarChar, 200)
+                    {
+                        Value = warehouse.WarehouseName
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@IsRefrigerated", SqlDbType.Bit)
+                    {
+                        Value = warehouse.IsRefrigerated
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@CreatedBy", SqlDbType.Int)
+                    {
+                        Value = warehouse.CreatedBy
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@Remark", SqlDbType.NVarChar, 255)
+                    {
+                        Value = (object)warehouse.Remark ?? DBNull.Value
+                    });
+
+                    // Execute & fetch new ID
+                    var result = await cmd.ExecuteScalarAsync();
+                    return Convert.ToInt32(result);
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Warehouse insertion failed. Please try again later.", ex);
+            }
+            finally
+            {
+                if (connection != null)
+                    await connection.CloseAsync();
+            }
+        }
+        public async Task<IEnumerable<Warehouse_DTO>> GetWarehouses()
+        {
+            var warehouses = new List<Warehouse_DTO>();
+
+            try
+            {
+                using var connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_Get_Warehouses";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    warehouses.Add(new Warehouse_DTO
+                    {
+                        WarehouseID = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        WarehouseName = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        IsRefrigerated = !reader.IsDBNull(2) && reader.GetBoolean(2),
+                        CreatedBy = !reader.IsDBNull(3) ? reader.GetInt32(3) : 0,
+                        Remark = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        CreatedDate = !reader.IsDBNull(5) ? reader.GetDateTime(5) : DateTime.MinValue
+                    });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve warehouses. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlconnection.GetConnection().CloseAsync();
+            }
+
+            return warehouses;
+        }
+
+        #endregion
     }
 }

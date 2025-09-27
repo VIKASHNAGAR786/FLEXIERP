@@ -35,4 +35,13 @@
         public int PageSize { get; set; } = 10;
     }
 
+    public class WarehouseModel
+    {
+        public string WarehouseName { get; set; }
+        public bool IsRefrigerated { get; set; }
+        public int CreatedBy { get; set; }
+        public string Remark { get; set; }
+    }
+
+
 }

@@ -7,6 +7,7 @@
         public string PhoneNo { get; set; }
         public string Email { get; set; }
         public int? PaymentMode { get; set; }
+        public string? Remark { get; set; }
     }
     public class SaleDetail
     {

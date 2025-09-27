@@ -17,5 +17,10 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<int> AddProvider(ProviderModel provider);
         public Task<IEnumerable<Provider_DTO>> GetProviders(PaginationFilter filter);
         #endregion
+
+        #region Warehouse Work
+        public Task<int> AddWarehouse(WarehouseModel warehouse);
+        public Task<IEnumerable<Warehouse_DTO>> GetWarehouses();
+        #endregion
     }
 }

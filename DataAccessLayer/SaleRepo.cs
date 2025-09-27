@@ -117,6 +117,12 @@ namespace FLEXIERP.DataAccessLayer
                     Direction = ParameterDirection.Input
                 });
 
+                cmd.Parameters.Add(new SqlParameter("@remark", SqlDbType.VarChar, 255)
+                {
+                    Value = (object?)sale.Customer?.Remark ?? DBNull.Value,
+                    Direction = ParameterDirection.Input
+                });
+
                 cmd.Parameters.Add(new SqlParameter("@PhoneNo", SqlDbType.VarChar, 50)
                 {
                     Value = (object?)sale.Customer?.PhoneNo ?? DBNull.Value,
@@ -294,7 +300,8 @@ namespace FLEXIERP.DataAccessLayer
                         PhoneNo = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
                         Email = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
                         Remark = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
-                        TotalRecords = !reader.IsDBNull(6) ? reader.GetInt32(6) : 0
+                        CustomerAddress = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
+                        TotalRecords = !reader.IsDBNull(7) ? reader.GetInt32(7) : 0
                     });
                 }
             }

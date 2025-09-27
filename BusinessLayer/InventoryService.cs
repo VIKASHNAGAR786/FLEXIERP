@@ -274,6 +274,17 @@ namespace FLEXIERP.BusinessLayer
         }
         #endregion
 
+        #region Warehouse Work
+        public async Task<int> AddWarehouse(WarehouseModel warehouse)
+        {
+            return await inventoryRepo.AddWarehouse(warehouse);
+        }
+        public async Task<IEnumerable<Warehouse_DTO>> GetWarehouses()
+        {
+            return await inventoryRepo.GetWarehouses();
+        }
+        #endregion
+
 
     }
 }

@@ -87,5 +87,4 @@ app.Run();
 
 
 //dotnet publish -c Release -r win-x64 /p:PublishSingleFile=true /p:SelfContained=true
-
-
+//publish path -  C:\Users\VIKAS NAGAR\source\repos\FLEXIERP\bin\Release\net8.0\win-x64\publish

@@ -187,6 +187,46 @@ namespace FLEXIERP.Controllers
         }
         #endregion
 
+        #region Warehouse Work
+        [HttpPost("AddWarehouse")]
+        public async Task<ActionResult<int>> AddWarehouse([FromBody] WarehouseModel warehouse)
+        {
+            if (warehouse == null)
+                return BadRequest("Warehouse data is required.");
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                warehouse.CreatedBy = userid.Value;
+                var addedWarehouseId = await inventoryService.AddWarehouse(warehouse);
+                return Ok(addedWarehouseId);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+        [HttpGet("GetWarehouses")]
+        public async Task<ActionResult<IEnumerable<Warehouse_DTO>>> GetWarehouses()
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                var warehouses = await inventoryService.GetWarehouses();
+                return Ok(warehouses);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
 
     }
 }

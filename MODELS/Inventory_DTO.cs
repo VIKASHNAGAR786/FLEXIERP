@@ -28,5 +28,16 @@
         public string? FullName { get; set; }
         public int? TotalRecords { get; set; }
     }
+    public class Warehouse_DTO
+    {
+        public int? WarehouseID { get; set; }
+        public string? WarehouseName { get; set; }
+        public bool? IsRefrigerated { get; set; }
+        public int? CreatedBy { get; set; }
+        public string? Remark { get; set; }
+        public DateTime? CreatedDate { get; set; }
+    }
+
+
 
 }

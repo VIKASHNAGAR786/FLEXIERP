@@ -41,6 +41,7 @@
         public string PhoneNo { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Remark { get; set; } = string.Empty;
+        public string CustomerAddress { get; set; } = string.Empty;
         public int TotalRecords { get; set; }
     }
 
