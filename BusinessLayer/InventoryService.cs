@@ -1,9 +1,10 @@
-﻿using FLEXIERP.BusinesLayer_Interfaces;
+﻿using ClosedXML.Excel;
+using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
+using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using SelectPdf;
-using ClosedXML.Excel;
 using System.Drawing;
 
 namespace FLEXIERP.BusinessLayer
@@ -260,6 +261,17 @@ namespace FLEXIERP.BusinessLayer
         }
 
 
+        #endregion
+
+        #region vendors / provider
+        public async Task<int> AddProvider(ProviderModel provider)
+        {
+            return await inventoryRepo.AddProvider(provider);   
+        }
+        public Task<IEnumerable<Provider_DTO>> GetProviders(PaginationFilter filter)
+        {
+            return inventoryRepo.GetProviders(filter);  
+        }
         #endregion
 
 

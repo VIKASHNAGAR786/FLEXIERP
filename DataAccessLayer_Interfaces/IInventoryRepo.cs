@@ -1,4 +1,5 @@
-﻿using FLEXIERP.MODELS;
+﻿using FLEXIERP.DTOs;
+using FLEXIERP.MODELS;
 
 namespace FLEXIERP.DataAccessLayer_Interfaces
 {
@@ -10,6 +11,11 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         #region save product
         public Task<string> AddProduct(ProductModel product);
         public Task<IEnumerable<Product_DTO>> GetProducts(PaginationFilter filter);
+        #endregion
+
+        #region vendors / provider
+        public Task<int> AddProvider(ProviderModel provider);
+        public Task<IEnumerable<Provider_DTO>> GetProviders(PaginationFilter filter);
         #endregion
     }
 }

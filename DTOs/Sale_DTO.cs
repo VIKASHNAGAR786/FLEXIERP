@@ -59,4 +59,42 @@
         public string FullName { get; set; } = string.Empty;
         public int TotalRecords { get; set; }
     }
+
+    public record ProviderModel
+    {
+        public required string ProviderName { get; set; }
+        public required string ProviderType { get; set; }
+        public string ContactPerson { get; set; }
+        public required string ContactEmail { get; set; }
+        public required string ContactPhone { get; set; }
+        public required string ProviderAddress { get; set; }
+        public required string City { get; set; }
+        public required string State { get; set; }
+        public required string Country { get; set; }
+        public string PaymentTerms { get; set; }
+        public int CreatedBy { get; set; }
+       
+    }
+
+    public record Provider_DTO
+    {
+        public long? SrNo { get; set; }
+        public int ProviderID { get; set; }
+        public string? ProviderName { get; set; }
+        public string? ProviderType { get; set; }
+        public string? ContactPerson { get; set; }
+        public string? ContactEmail { get; set; }
+        public string? ContactPhone { get; set; }
+        public string? ProviderAddress { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? Country { get; set; }
+        public string? PaymentTerms { get; set; }
+        public int CreatedBy { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public string? CreatedByName { get; set; }
+        public int TotalRows { get; set; }
+    }
+
+
 }

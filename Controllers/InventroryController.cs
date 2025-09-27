@@ -2,6 +2,7 @@
 using FLEXIERP.BusinessLayer;
 using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
+using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using FLEXIERP.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -141,6 +142,48 @@ namespace FLEXIERP.Controllers
             // Return as downloadable file
             string fileName = "ProductReport.xlsx";
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+        #endregion
+
+
+        #region vendors / provider
+        [HttpPost("AddProvider")]
+        public async Task<ActionResult<int>> AddProvider([FromBody] ProviderModel provider)
+        {
+            if (provider == null)
+                return BadRequest("Provider data is required.");
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                provider.CreatedBy = userid.Value;
+                var addedProviderId = await inventoryService.AddProvider(provider);
+                return Ok(addedProviderId);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetProviders")]
+        public async Task<ActionResult<IEnumerable<Provider_DTO>>> GetProviders([FromQuery] PaginationFilter filter)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                var providers = await inventoryService.GetProviders(filter);
+                return Ok(providers);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
         }
         #endregion
 

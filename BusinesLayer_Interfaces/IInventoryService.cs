@@ -1,4 +1,5 @@
-﻿using FLEXIERP.MODELS;
+﻿using FLEXIERP.DTOs;
+using FLEXIERP.MODELS;
 
 namespace FLEXIERP.BusinesLayer_Interfaces
 {
@@ -12,6 +13,12 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<IEnumerable<Product_DTO>> GetProducts(PaginationFilter filter);
         public Task<byte[]> GetProductReportPdf(PaginationFilter filter);
         public Task<byte[]> GetProductReportExcel(PaginationFilter filter);
+        #endregion
+
+
+        #region vendors / provider
+        public Task<int> AddProvider(ProviderModel provider);
+        public Task<IEnumerable<Provider_DTO>> GetProviders(PaginationFilter filter);
         #endregion
     }
 }

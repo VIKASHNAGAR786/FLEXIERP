@@ -1,5 +1,6 @@
 ﻿using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DATABASE;
+using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
 using Microsoft.Data.SqlClient;
@@ -224,6 +225,115 @@ namespace FLEXIERP.DataAccessLayer
             }
 
             return products;
+        }
+
+        #endregion
+
+        #region vendors / provider
+        public async Task<int> AddProvider(ProviderModel provider)
+        {
+            SqlConnection connection = null;
+            try
+            {
+                connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "usp_InsertProvider";
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    // Input parameters
+                    cmd.Parameters.Add(new SqlParameter("@ProviderName", SqlDbType.VarChar, 150) { Value = provider.ProviderName });
+                    cmd.Parameters.Add(new SqlParameter("@ProviderType", SqlDbType.VarChar, 50) { Value = (object)provider.ProviderType ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@ContactPerson", SqlDbType.VarChar, 100) { Value = (object)provider.ContactPerson ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@ContactEmail", SqlDbType.VarChar, 100) { Value = (object)provider.ContactEmail ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@ContactPhone", SqlDbType.VarChar, 20) { Value = (object)provider.ContactPhone ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@ProviderAddress", SqlDbType.VarChar, 200) { Value = (object)provider.ProviderAddress ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@City", SqlDbType.VarChar, 50) { Value = (object)provider.City ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@State", SqlDbType.VarChar, 50) { Value = (object)provider.State ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@Country", SqlDbType.VarChar, 50) { Value = (object)provider.Country ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@PaymentTerms", SqlDbType.VarChar, 50) { Value = (object)provider.PaymentTerms ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@CreatedBy", SqlDbType.Int) { Value = provider.CreatedBy });
+
+                    // Output parameter
+                    var outputId = new SqlParameter("@NewProviderID", SqlDbType.Int) { Direction = ParameterDirection.Output };
+                    cmd.Parameters.Add(outputId);
+
+                    await cmd.ExecuteNonQueryAsync();
+
+                    return (int)outputId.Value; // return the newly inserted ProviderID
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Provider insertion failed. Please try again later.", ex);
+            }
+            finally
+            {
+                if (connection != null)
+                    await connection.CloseAsync();
+            }
+        }
+        public async Task<IEnumerable<Provider_DTO>> GetProviders(PaginationFilter filter)
+        {
+            var providers = new List<Provider_DTO>();
+
+            try
+            {
+                using var connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_GetProviders";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.NVarChar, 50)
+                { Value = string.IsNullOrEmpty(filter.StartDate) ? DBNull.Value : filter.StartDate });
+
+                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.NVarChar, 50)
+                { Value = string.IsNullOrEmpty(filter.EndDate) ? DBNull.Value : filter.EndDate });
+
+                cmd.Parameters.Add(new SqlParameter("@SearchTerm", SqlDbType.NVarChar, 100)
+                { Value = string.IsNullOrEmpty(filter.SearchTerm) ? DBNull.Value : filter.SearchTerm });
+
+                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = filter.PageNo });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = filter.PageSize });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    providers.Add(new Provider_DTO
+                    {
+                        SrNo = !reader.IsDBNull(0) ? reader.GetInt64(0) : 0,
+                        ProviderID = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
+                        ProviderName = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        ProviderType = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        ContactPerson = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        ContactEmail = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
+                        ContactPhone = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
+                        ProviderAddress = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
+                        City = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
+                        State = !reader.IsDBNull(9) ? reader.GetString(9) : string.Empty,
+                        Country = !reader.IsDBNull(10) ? reader.GetString(10) : string.Empty,
+                        PaymentTerms = !reader.IsDBNull(11) ? reader.GetString(11) : string.Empty,
+                        CreatedBy = !reader.IsDBNull(12) ? reader.GetInt32(12) : 0,
+                        CreatedDate = !reader.IsDBNull(13) ? reader.GetDateTime(13) : null,
+                        CreatedByName = !reader.IsDBNull(14) ? reader.GetString(14) : string.Empty,
+                        TotalRows = !reader.IsDBNull(15) ? reader.GetInt32(15) : 0
+                    });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve providers. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlconnection.GetConnection().CloseAsync();
+            }
+
+            return providers;
         }
 
         #endregion
