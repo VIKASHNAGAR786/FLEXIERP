@@ -11,6 +11,7 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         #region save product
         public Task<string> AddProduct(ProductModel product);
         public Task<IEnumerable<Product_DTO>> GetProducts(PaginationFilter filter);
+        public Task<IEnumerable<Product_DTO>> GetSoldProductsList(PaginationFilter filter);
         #endregion
 
         #region vendors / provider

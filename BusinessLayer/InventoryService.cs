@@ -260,6 +260,10 @@ namespace FLEXIERP.BusinessLayer
             return stream.ToArray();
         }
 
+        public async Task<IEnumerable<Product_DTO>> GetSoldProductsList(PaginationFilter filter)
+        {
+            return await inventoryRepo.GetSoldProductsList(filter);
+        }
 
         #endregion
 

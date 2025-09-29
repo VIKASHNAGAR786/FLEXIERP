@@ -143,6 +143,25 @@ namespace FLEXIERP.Controllers
             string fileName = "ProductReport.xlsx";
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
+
+        [HttpGet("GetSoldProductsList")]
+        public async Task<ActionResult<IEnumerable<Product_DTO>>> GetSoldProductsList([FromQuery] PaginationFilter filter)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var addedCategory = await inventoryService.GetSoldProductsList(filter);
+                return Ok(addedCategory);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
         #endregion
 
 

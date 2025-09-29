@@ -13,6 +13,7 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<IEnumerable<Product_DTO>> GetProducts(PaginationFilter filter);
         public Task<byte[]> GetProductReportPdf(PaginationFilter filter);
         public Task<byte[]> GetProductReportExcel(PaginationFilter filter);
+        public Task<IEnumerable<Product_DTO>> GetSoldProductsList(PaginationFilter filter);
         #endregion
 
 
