@@ -11,9 +11,9 @@ namespace FLEXIERP.BusinessLayer
         {
             accountRepo = _accountRepo;
         }
-        public async Task<User1?> Login(string? email, string? UserName, string password)
+        public async Task<User1?> Login(string? email, string? UserName, string password, string? ipAddress, string? deviceInfo)
         {
-            return await this.accountRepo.Login(email, UserName, password);
+            return await this.accountRepo.Login(email, UserName, password,ipAddress,deviceInfo);
         }
         public Task<User1> Register(User1 user)
         {
