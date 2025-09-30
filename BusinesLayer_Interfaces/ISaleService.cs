@@ -15,6 +15,8 @@ namespace FLEXIERP.BusinesLayer_Interfaces
 
         #region Get Sale
         public Task<List<Sale_DTO>> GetSalesAsync(PaginationFilter pagination);
+        public Task<byte[]> GetSalesReportPdf(PaginationFilter filter);
+        public Task<byte[]> GetSalesReportExcel(PaginationFilter filter);
         #endregion
 
         #region Old customer 

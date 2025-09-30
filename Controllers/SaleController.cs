@@ -80,6 +80,41 @@ namespace FLEXIERP.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+        [HttpGet("GetSalesReportPdf")]
+        public async Task<IActionResult> GetSalesReportPdf([FromQuery] PaginationFilter filter)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var pdfBytes = await _saleService.GetSalesReportPdf(filter);
+                return File(pdfBytes, "application/pdf", "SampleReport.pdf");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetSalesReportExcel")]
+        public async Task<IActionResult> GetSalesReportExcel([FromQuery] PaginationFilter filter)
+        {
+            int? userid = User.GetUserId();
+            if (userid == null)
+                return Unauthorized("User ID not found in token.");
+            // Call service to get Excel file bytes
+            byte[] fileBytes = await _saleService.GetSalesReportExcel(filter);
+
+            if (fileBytes == null || fileBytes.Length == 0)
+                return NotFound("No data found for the given filter.");
+
+            // Return as downloadable file
+            string fileName = "GetSalesReport.xlsx";
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
         #endregion
 
         #region Old customer 
