@@ -162,6 +162,42 @@ namespace FLEXIERP.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        [HttpGet("GetSoldProductReportPdf")]
+        public async Task<IActionResult> GetSoldProductReportPdf([FromQuery] PaginationFilter filter)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var pdfBytes = await inventoryService.GetSoldProductReportPdf(filter);
+                return File(pdfBytes, "application/pdf", "SampleReport.pdf");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetSoldProductReportExcel")]
+        public async Task<IActionResult> GetSoldProductReportExcel([FromQuery] PaginationFilter filter)
+        {
+            int? userid = User.GetUserId();
+            if (userid == null)
+                return Unauthorized("User ID not found in token.");
+            // Call service to get Excel file bytes
+            byte[] fileBytes = await inventoryService.GetSoldProductReportExcel(filter);
+
+            if (fileBytes == null || fileBytes.Length == 0)
+                return NotFound("No data found for the given filter.");
+
+            // Return as downloadable file
+            string fileName = "ProductReport.xlsx";
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
         #endregion
 
 
