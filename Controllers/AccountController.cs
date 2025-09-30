@@ -163,5 +163,29 @@ namespace FLEXIERP.Controllers
             return BadRequest(new { message = "User registration unsuccessful" });
         }
         #endregion
+
+        [HttpGet("GetCompanyInfo")]
+        public async Task<IActionResult> GetCompanyInfo()
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                CompanyInfoDto? data = await accouuntservice.GetCompanyInfoByUserAsync((int)userid);
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                // You can log ex.Message here using ILogger
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving company data.",
+                    details = ex.Message
+                });
+            }
+        }
+
     }
 }

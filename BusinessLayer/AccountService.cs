@@ -92,5 +92,10 @@ namespace FLEXIERP.BusinessLayer
         {
             return await this.accountRepo.GetUserLoginHistory(pageNo, pageSize);
         }
+
+        public async Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId)
+        {
+            return await this.accountRepo.GetCompanyInfoByUserAsync(userId);
+        }
     }
 }

@@ -89,6 +89,20 @@
             public int TotalRecords { get; set; }
         }
 
+        public record CompanyInfoDto
+{
+    public int ComInfoId { get; init; }
+    public string CompanyName { get; init; }
+    public string ContactNo { get; init; }
+    public string WhatsAppNo { get; init; }
+    public string Email { get; init; }
+    public string Address { get; init; }
+    public string FullName { get; init; }
+    public string CreatedDate { get; init; }
+    public string CompanyLogo { get; init; }
+}
+
+
     }
 
 }

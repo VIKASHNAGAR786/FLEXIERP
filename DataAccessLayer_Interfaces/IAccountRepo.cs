@@ -10,5 +10,6 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<bool> LogoutUser(int userId);
 
         public Task<IEnumerable<UserLoginHistoryDTO>> GetUserLoginHistory(int pageNo = 1, int pageSize = 20);
+        public Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId);
     }
 }

@@ -1,9 +1,11 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.ExtendedProperties;
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
+using FLEXIERP.MODELS.AGRIMANDI.Model;
 using SelectPdf;
 
 namespace FLEXIERP.BusinessLayer
@@ -11,9 +13,11 @@ namespace FLEXIERP.BusinessLayer
     public class SaleService : ISaleService
     {
         private readonly ISaleRepo _saleRepo;
-        public SaleService(ISaleRepo saleRepo)
+        private readonly IAccountRepo accountRepo;
+        public SaleService(ISaleRepo saleRepo, IAccountRepo accountRepo)
         {
             _saleRepo = saleRepo;
+            this.accountRepo = accountRepo;
         }
 
         #region Product By Barcode
@@ -39,17 +43,18 @@ namespace FLEXIERP.BusinessLayer
         {
             // Dummy data
             List<Sale_DTO> saledata = await _saleRepo.GetSalesAsync(filter);
+            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
 
             // Build HTML
-            var html = @"
+            var html = $@"
 <html>
 <head>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 10pt; margin: 5px; color: #333; }
-        .company-header { text-align:center; margin-bottom: 15px; }
-        .company-header h1 { font-size: 22pt; color: #1f4e79; margin-bottom: 2px; }
-        .company-header h3 { font-size: 11pt; color: #555; margin: 2px 0; }
-        .report-title { 
+        body {{ font-family: Arial, sans-serif; font-size: 10pt; margin: 5px; color: #333; }}
+        .company-header {{ text-align:center; margin-bottom: 15px; }}
+        .company-header h1 {{ font-size: 22pt; color: #1f4e79; margin-bottom: 2px; }}
+        .company-header h3 {{ font-size: 11pt; color: #555; margin: 2px 0; }}
+        .report-title {{ 
             background-color: #00bfff; 
             color: white; 
             padding: 8px; 
@@ -58,20 +63,20 @@ namespace FLEXIERP.BusinessLayer
             margin-top: 10px; 
             border-radius: 5px;
             display: inline-block;
-        }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background-color: #00bfff; color: white; border: 1px solid #555; padding: 6px; text-align: center; }
-        td { border: 1px solid #ccc; padding: 5px; text-align: center; }
-        tbody tr:nth-child(even) { background-color: #f2f7fb; } /* zebra stripes */
-        tbody tr:hover { background-color: #d6eefc; } /* hover effect */
+        }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+        th {{ background-color: #00bfff; color: white; border: 1px solid #555; padding: 6px; text-align: center; }}
+        td {{ border: 1px solid #ccc; padding: 5px; text-align: center; }}
+        tbody tr:nth-child(even) {{ background-color: #f2f7fb; }} /* zebra stripes */
+        tbody tr:hover {{ background-color: #d6eefc; }} /* hover effect */
     </style>
 </head>
 <body>
     <div class='company-header'>
-        <h1>FLEXIERP Pvt. Ltd.</h1>
-        <h3>123 Business Street, City, Country</h3>
-        <h3>Phone: +91-1234567890 | Email: info@flexierp.com</h3>
-        <div class='report-title'>Sold Product Table Report</div>
+        <h1>{company.CompanyName}</h1>
+        <h3>{company.Address}</h3>
+        <h3>{company.ContactNo} | {company.Email}</h3>
+        <div class='report-title'>Product Table Report</div>
     </div>
 
     <table>
@@ -132,6 +137,7 @@ namespace FLEXIERP.BusinessLayer
         {
             // Get product data
             IEnumerable<Sale_DTO> products = await _saleRepo.GetSalesAsync(filter);
+            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Sold Product Report");
@@ -139,19 +145,19 @@ namespace FLEXIERP.BusinessLayer
             int currentRow = 1;
 
             // --- Company Header ---
-            worksheet.Cell(currentRow, 1).Value = "FLEXIERP Pvt. Ltd.";
+            worksheet.Cell(currentRow, 1).Value = company.CompanyName;
             worksheet.Cell(currentRow, 1).Style.Font.Bold = true;
             worksheet.Cell(currentRow, 1).Style.Font.FontSize = 22;
             worksheet.Range(currentRow, 1, currentRow, 8).Merge();
             worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             currentRow++;
 
-            worksheet.Cell(currentRow, 1).Value = "123 Business Street, City, Country";
+            worksheet.Cell(currentRow, 1).Value = company.Address;
             worksheet.Range(currentRow, 1, currentRow, 8).Merge();
             worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             currentRow++;
 
-            worksheet.Cell(currentRow, 1).Value = "Phone: +91-1234567890 | Email: info@flexierp.com";
+            worksheet.Cell(currentRow, 1).Value = @$"{company.ContactNo} | {company.Email}";
             worksheet.Range(currentRow, 1, currentRow, 8).Merge();
             worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             currentRow += 2;

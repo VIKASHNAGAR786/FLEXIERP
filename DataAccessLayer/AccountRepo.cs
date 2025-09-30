@@ -393,5 +393,50 @@ namespace FLEXIERP.DataAccessLayer
             return historyList;
         }
 
+        public async Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId)
+        {
+            CompanyInfoDto? companyInfo = null;
+
+            try
+            {
+                using var connection = sqlConnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT * FROM dbo.fun_CompanyInfoByUser_get(@UserID)";
+                cmd.CommandType = CommandType.Text;
+
+                cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.Int) { Value = userId });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    companyInfo = new CompanyInfoDto
+                    {
+                        ComInfoId = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        CompanyName = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        ContactNo = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        WhatsAppNo = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        Email = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        Address = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
+                        FullName = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
+                        CreatedDate = !reader.IsDBNull(7) ? reader.GetString(7) :string.Empty,
+                        CompanyLogo = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty
+                    };
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve company info. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+
+            return companyInfo;
+        }
+
+
     }
 }
