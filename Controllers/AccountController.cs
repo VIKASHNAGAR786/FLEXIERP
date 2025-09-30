@@ -9,7 +9,7 @@ namespace FLEXIERP.Controllers
     [ApiController]
     public class AccountController : ControllerBase
     {
-        private readonly IAccountServices accouuntservice;  
+        private readonly IAccountServices accouuntservice;
         public AccountController(IAccountServices _accouuntservice)
         {
             accouuntservice = _accouuntservice;
@@ -24,34 +24,29 @@ namespace FLEXIERP.Controllers
             try
             {
                 if (string.IsNullOrEmpty(user.Email))
+                {
                     return BadRequest(new { message = "Email address needs to be entered" });
-
-                if (string.IsNullOrEmpty(user.Password))
+                }
+                else if (string.IsNullOrEmpty(user.Password))
+                {
                     return BadRequest(new { message = "Password needs to be entered" });
+                }
 
-                // Safe IP and device info
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-                var deviceInfo = Request.Headers["User-Agent"].FirstOrDefault() ?? "Unknown";
-
-                User1? loggedInUser = await accouuntservice.Login(
-                    user.Email,
-                    user.UserName,
-                    user.Password,
-                    ipAddress,
-                    deviceInfo
-                );
+                User1? loggedInUser = await accouuntservice.Login(user.Email, user.UserName, user.Password);
 
                 if (loggedInUser != null)
+                {
                     return Ok(loggedInUser);
+                }
 
                 return BadRequest(new { message = "Invalid login credentials" });
             }
             catch (Exception ex)
             {
+                // log the error here (e.g., using ILogger or any logging framework)
                 return StatusCode(500, new { message = "An unexpected error occurred.", details = ex.Message });
             }
         }
-
 
 
         // POST: auth/register
@@ -95,16 +90,7 @@ namespace FLEXIERP.Controllers
 
             User1 registeredUser = await accouuntservice.Register(userToRegister);
 
-            string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            string deviceInfo = Request.Headers["User-Agent"].FirstOrDefault() ?? "Unknown";
-
-            User1? loggedInUser = await accouuntservice.Login(
-            registeredUser.Email,
-            registeredUser.Username,
-            user.PasswordHash,
-            ipAddress,
-            deviceInfo
-            );
+            User1? loggedInUser = await accouuntservice.Login(registeredUser.Email,registeredUser.Username, user.PasswordHash);
 
             if (loggedInUser != null)
             {

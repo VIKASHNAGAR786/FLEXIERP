@@ -60,7 +60,7 @@ namespace FLEXIERP.DataAccessLayer
 
         #endregion
 
-        public async Task<User1?> Login(string? email, string? UserName, string password, string? ipAddress, string? deviceInfo)
+        public async Task<User1?> Login(string? email, string? UserName, string password)
         {
             try
             {
@@ -93,16 +93,6 @@ namespace FLEXIERP.DataAccessLayer
 
                 var reader = await cmd.ExecuteReaderAsync();
                 var user = await GetUserFromReader(reader, password);
-
-                var spCmd = sqlConnection.GetConnection().CreateCommand();
-                spCmd.CommandText = "pro_UserLoginAttempt";
-                spCmd.CommandType = CommandType.StoredProcedure;
-                spCmd.Parameters.AddWithValue("@Username", user ?? (object)DBNull.Value);
-                spCmd.Parameters.AddWithValue("@Password", password);
-                spCmd.Parameters.AddWithValue("@IPAddress", ipAddress ?? (object)DBNull.Value);
-                spCmd.Parameters.AddWithValue("@DeviceInfo", deviceInfo ?? (object)DBNull.Value);
-
-                await spCmd.ExecuteNonQueryAsync();
 
                 if (user == null)
                     return null;
