@@ -1,7 +1,10 @@
 ﻿namespace FLEXIERP.MODELS
 {
-    using System.ComponentModel.DataAnnotations;
+    using DocumentFormat.OpenXml.Drawing.Spreadsheet;
+    using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+    using DocumentFormat.OpenXml.Spreadsheet;
     using Microsoft.AspNetCore.Mvc;
+    using System.ComponentModel.DataAnnotations;
 
     namespace AGRIMANDI.Model
     {
@@ -90,18 +93,28 @@
         }
 
         public record CompanyInfoDto
-{
-    public int ComInfoId { get; init; }
-    public string CompanyName { get; init; }
-    public string ContactNo { get; init; }
-    public string WhatsAppNo { get; init; }
-    public string Email { get; init; }
-    public string Address { get; init; }
-    public string FullName { get; init; }
-    public string CreatedDate { get; init; }
-    public string CompanyLogo { get; init; }
-}
-
+        {
+            public int ComInfoId { get; init; }
+            public string CompanyName { get; init; }
+            public string ContactNo { get; init; }
+            public string WhatsAppNo { get; init; }
+            public string Email { get; init; }
+            public string Address { get; init; }
+            public string FullName { get; init; }
+            public string CreatedDate { get; init; }
+            public string CompanyLogo { get; init; }
+        }
+        public record UpdateCompanyInfo
+        {
+            public string? Company_Name { get; set; }
+            public string? Contact_No { get; set; }
+            public string? WhatsApp_No { get; set; }
+            public string? Email { get; set; }
+            public string? Address { get; set; }
+            public int? row_id { get; set; }
+            public int? UpdatedBy { get; set; }
+            public string? CompanyLogo { get; set; }
+        }
 
     }
 

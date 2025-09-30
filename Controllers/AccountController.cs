@@ -164,6 +164,8 @@ namespace FLEXIERP.Controllers
         }
         #endregion
 
+        #region Company Info
+
         [HttpGet("GetCompanyInfo")]
         public async Task<IActionResult> GetCompanyInfo()
         {
@@ -186,6 +188,30 @@ namespace FLEXIERP.Controllers
                 });
             }
         }
+        [HttpPost("UpdateCompanyInfo")]
+        public async Task<IActionResult> UpdateCompanyInfo([FromBody] UpdateCompanyInfo updateCompanyInfo)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                updateCompanyInfo.UpdatedBy = userid.Value;
+                int? data = await accouuntservice.UpdateCompanyInfo(updateCompanyInfo);
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                // You can log ex.Message here using ILogger
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving company data.",
+                    details = ex.Message
+                });
+            }
+        }
+        #endregion
 
     }
 }

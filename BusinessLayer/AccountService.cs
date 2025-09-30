@@ -1,4 +1,5 @@
-﻿using FLEXIERP.BusinesLayer_Interfaces;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
 
@@ -96,6 +97,10 @@ namespace FLEXIERP.BusinessLayer
         public async Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId)
         {
             return await this.accountRepo.GetCompanyInfoByUserAsync(userId);
+        }
+        public async Task<int> UpdateCompanyInfo(UpdateCompanyInfo UpdateCompanyInfo)
+        {
+            return await this.accountRepo.UpdateCompanyInfo(UpdateCompanyInfo);
         }
     }
 }

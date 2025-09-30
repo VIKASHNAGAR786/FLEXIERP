@@ -1,4 +1,5 @@
 ﻿using FLEXIERP.MODELS.AGRIMANDI.Model;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FLEXIERP.BusinesLayer_Interfaces
 {
@@ -9,6 +10,7 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<bool> LogoutUser(int userId);
         public Task<IEnumerable<UserLoginHistoryDTO>> GetUserLoginHistory(int pageNo = 1, int pageSize = 20);
         public Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId);
+        public Task<int> UpdateCompanyInfo(UpdateCompanyInfo UpdateCompanyInfo);
 
 
     }

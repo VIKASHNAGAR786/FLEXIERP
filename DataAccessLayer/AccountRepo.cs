@@ -1,4 +1,7 @@
-﻿using FLEXIERP.DataAccessLayer_Interfaces;
+﻿using DocumentFormat.OpenXml.Drawing.Spreadsheet;
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+using DocumentFormat.OpenXml.Spreadsheet;
+using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DATABASE;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
 using Microsoft.Data.SqlClient;
@@ -9,6 +12,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FLEXIERP.DataAccessLayer
 {
@@ -396,7 +400,6 @@ namespace FLEXIERP.DataAccessLayer
         public async Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId)
         {
             CompanyInfoDto? companyInfo = null;
-
             try
             {
                 using var connection = sqlConnection.GetConnection();
@@ -437,6 +440,42 @@ namespace FLEXIERP.DataAccessLayer
             return companyInfo;
         }
 
+        public async Task<int> UpdateCompanyInfo(UpdateCompanyInfo UpdateCompanyInfo)
+        {
+            try
+            {
+                var connection = sqlConnection.GetConnection();
+                await connection.OpenAsync();
 
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "UpdateCompanyInfo";
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    // Add parameter
+                    cmd.Parameters.Add(new SqlParameter("@Company_Name", SqlDbType.VarChar) { Value = UpdateCompanyInfo.Company_Name });
+                    cmd.Parameters.Add(new SqlParameter("@Contact_No", SqlDbType.VarChar) { Value = UpdateCompanyInfo.Contact_No });
+                    cmd.Parameters.Add(new SqlParameter("@WhatsApp_No", SqlDbType.VarChar) { Value = UpdateCompanyInfo.WhatsApp_No });
+                    cmd.Parameters.Add(new SqlParameter("@Email", SqlDbType.VarChar) { Value = UpdateCompanyInfo.Email });
+                    cmd.Parameters.Add(new SqlParameter("@Address", SqlDbType.VarChar) { Value = UpdateCompanyInfo.Address });
+                    cmd.Parameters.Add(new SqlParameter("@row_id", SqlDbType.Int) { Value = UpdateCompanyInfo.row_id });
+                    cmd.Parameters.Add(new SqlParameter("@UpdatedBy   ", SqlDbType.Int) { Value = UpdateCompanyInfo.UpdatedBy });
+                    cmd.Parameters.Add(new SqlParameter("@CompanyLogo", SqlDbType.VarChar) { Value = UpdateCompanyInfo.CompanyLogo });
+
+                    // Execute SP
+                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                    return rowsAffected;
+                }
+            }
+            catch (SqlException ex)
+            {
+                // Log exception if needed
+                throw new Exception("Logout failed due to database error.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+        }
     }
 }
