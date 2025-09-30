@@ -7,5 +7,7 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<User1?> Login(string? email,string? username, string password);
         public Task<User1> Register(User1 user);
         public Task<bool> LogoutUser(int userId);
+        public Task<IEnumerable<UserLoginHistoryDTO>> GetUserLoginHistory(int pageNo = 1, int pageSize = 20);
+
     }
 }

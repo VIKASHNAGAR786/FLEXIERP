@@ -1,4 +1,5 @@
 ﻿using FLEXIERP.BusinesLayer_Interfaces;
+using FLEXIERP.MODELS;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
 using FLEXIERP.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -85,6 +86,32 @@ namespace FLEXIERP.Controllers
             }
         }
 
+        [HttpGet("GetUserLoginHistory")]
+        public async Task<IActionResult> GetUserLoginHistory([FromQuery]PaginationFilter pagination)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var history = await accouuntservice.GetUserLoginHistory(pagination.PageNo, pagination.PageSize);
+
+                if (history == null || !history.Any())
+                    return NotFound(new { message = "No login history found." });
+
+                return Ok(history);
+            }
+            catch (Exception ex)
+            {
+                // You can log ex.Message here using ILogger
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving login history.",
+                    details = ex.Message
+                });
+            }
+        }
 
         // POST: auth/register
         [AllowAnonymous]

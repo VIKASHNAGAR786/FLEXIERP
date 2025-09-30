@@ -346,7 +346,52 @@ namespace FLEXIERP.DataAccessLayer
             }
         }
 
+        public async Task<IEnumerable<UserLoginHistoryDTO>> GetUserLoginHistory(int pageNo = 1, int pageSize = 20)
+        {
+            var historyList = new List<UserLoginHistoryDTO>();
 
+            try
+            {
+                using var connection = sqlConnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_GetUserLoginHistory";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                // Add parameters
+                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pageNo });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pageSize });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    historyList.Add(new UserLoginHistoryDTO
+                    {
+                        HistoryID = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        Username = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        Email = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        LoginTime = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        LogoutTime = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        Status = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
+                        IPAddress = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
+                        DeviceInfo = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
+                        FailureReason = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
+                        TotalRecords = !reader.IsDBNull(9) ? reader.GetInt32(9) : 0
+                    });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve user login history. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+
+            return historyList;
+        }
 
     }
 }

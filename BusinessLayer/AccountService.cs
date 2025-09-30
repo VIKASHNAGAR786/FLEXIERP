@@ -88,5 +88,9 @@ namespace FLEXIERP.BusinessLayer
         {
             return await this.accountRepo.LogoutUser(userId);
         }
+        public async Task<IEnumerable<UserLoginHistoryDTO>> GetUserLoginHistory(int pageNo = 1, int pageSize = 20)
+        {
+            return await this.accountRepo.GetUserLoginHistory(pageNo, pageSize);
+        }
     }
 }

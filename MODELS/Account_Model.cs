@@ -74,6 +74,21 @@
 
             public string? DeviceInfo { get; set; } 
         }
+
+        public class UserLoginHistoryDTO
+        {
+            public int HistoryID { get; set; }
+            public string Username { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public string LoginTime { get; set; } = string.Empty;
+            public string LogoutTime { get; set; } = string.Empty;
+            public string Status { get; set; } = string.Empty;
+            public string IPAddress { get; set; } = string.Empty;
+            public string DeviceInfo { get; set; } = string.Empty;
+            public string FailureReason { get; set; } = string.Empty;
+            public int TotalRecords { get; set; }
+        }
+
     }
 
 }
