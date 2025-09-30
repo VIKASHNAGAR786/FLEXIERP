@@ -64,6 +64,16 @@
             public int UserId { get; set; }
         }
 
+        public record StartUserSession
+        {
+            public string Username { get; set; } = string.Empty;
+
+            public string Password { get; set; } = string.Empty;
+
+            public string? IPAddress { get; set; }  
+
+            public string? DeviceInfo { get; set; } 
+        }
     }
 
 }

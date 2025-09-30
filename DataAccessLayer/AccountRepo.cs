@@ -228,7 +228,7 @@ namespace FLEXIERP.DataAccessLayer
                 insertCmd.CommandText = @"pro_Tbl_Users_insert";
                 insertCmd.CommandType = CommandType.StoredProcedure;
 
-               // insertCmd.Parameters.AddWithValue("@p_FullName", user1.FullName);
+                // insertCmd.Parameters.AddWithValue("@p_FullName", user1.FullName);
                 insertCmd.Parameters.Add(new SqlParameter
                 {
                     ParameterName = "@p_FullName",
@@ -271,6 +271,81 @@ namespace FLEXIERP.DataAccessLayer
                 await sqlConnection.GetConnection().CloseAsync();
             }
         }
+
+        public async Task<bool> StartUserSession(StartUserSession loginModel)
+        {
+            try
+            {
+                var connection = this.sqlConnection.GetConnection();
+                await connection.OpenAsync();
+
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "pro_UserLoginAttempt";
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    // Parameters
+                    cmd.Parameters.Add(new SqlParameter("@Username", SqlDbType.NVarChar, 50) { Value = loginModel.Username });
+                    cmd.Parameters.Add(new SqlParameter("@Password", SqlDbType.NVarChar, 256) { Value = loginModel.Password });
+                    cmd.Parameters.Add(new SqlParameter("@IPAddress", SqlDbType.VarChar, 50) { Value = (object?)loginModel.IPAddress ?? DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@DeviceInfo", SqlDbType.VarChar, 255) { Value = (object?)loginModel.DeviceInfo ?? DBNull.Value });
+
+                    // Execute SP
+                    var rows = await cmd.ExecuteNonQueryAsync();
+
+                    // Since SP does not return success explicitly, 
+                    // we return true if SP executed without exception
+                    return rows > 0;
+                }
+            }
+            catch (SqlException ex)
+            {
+                // Log error
+                throw new Exception("Login attempt failed due to database error.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+        }
+        public async Task<bool> LogoutUser(int userId)
+        {
+            try
+            {
+                var connection = sqlConnection.GetConnection();
+                await connection.OpenAsync();
+
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "pro_UserLogout";
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    // Add parameter
+                    cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.Int) { Value = userId });
+
+                    // Execute SP
+                    var rowsAffected = await cmd.ExecuteScalarAsync();
+
+                    // Return true if any row was updated
+                    if (rowsAffected is not null)
+                        return (int)rowsAffected > 0;
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                // Log exception if needed
+                throw new Exception("Logout failed due to database error.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+        }
+
 
 
     }

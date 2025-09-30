@@ -6,5 +6,7 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
     {
         public Task<User1?> Login(string? email, string? UserName, string password);
         public Task<User1> Register(User1 user);
+        public Task<bool> StartUserSession(StartUserSession loginModel);
+        public Task<bool> LogoutUser(int userId);
     }
 }

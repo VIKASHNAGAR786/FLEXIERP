@@ -24,6 +24,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
+builder.Services.AddHttpContextAccessor();
+
+
+
 // ✅ GLOBAL CORS ALLOW ALL - for dev use
 builder.Services.AddCors(options =>
 {

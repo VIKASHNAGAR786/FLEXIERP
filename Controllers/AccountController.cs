@@ -1,5 +1,6 @@
 ﻿using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
+using FLEXIERP.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,6 +46,42 @@ namespace FLEXIERP.Controllers
             {
                 // log the error here (e.g., using ILogger or any logging framework)
                 return StatusCode(500, new { message = "An unexpected error occurred.", details = ex.Message });
+            }
+        }
+
+        [HttpPatch("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                int? user = User.GetUserId();
+                int userid = user.Value;
+                bool result = false;
+                if (userid != 0)
+                {
+                    result = await accouuntservice.LogoutUser(userid);
+                }
+                else
+                {
+                    return BadRequest(new { message = "No active session found to logout." });
+                }
+                   
+
+                if (result)
+                {
+                    return Ok(new { message = "User logged out successfully." });
+                }
+
+                return BadRequest(new { message = "No active session found to logout." });
+            }
+            catch (Exception ex)
+            {
+                // Log the error (e.g., ILogger)
+                return StatusCode(500, new
+                {
+                    message = "An unexpected error occurred.",
+                    details = ex.Message
+                });
             }
         }
 
