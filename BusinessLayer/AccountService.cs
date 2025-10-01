@@ -2,6 +2,7 @@
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
+using Razorpay.Api;
 
 namespace FLEXIERP.BusinessLayer
 {
@@ -98,9 +99,36 @@ namespace FLEXIERP.BusinessLayer
         {
             return await this.accountRepo.GetCompanyInfoByUserAsync(userId);
         }
-        public async Task<int> UpdateCompanyInfo(UpdateCompanyInfo UpdateCompanyInfo)
+        public async Task<int> UpdateCompanyInfo(UpdateCompanyInfo UpdateCompanyInfo, IFormFile? file)
         {
-            return await this.accountRepo.UpdateCompanyInfo(UpdateCompanyInfo);
+            try
+            {
+                if (file != null)
+                {
+                    string commaseperatenames = string.Empty;
+                    string newFileName = $"{Path.GetFileName(file.FileName)}";
+                    string imagesFolder = Path.Combine(Directory.GetCurrentDirectory(), "Documents");
+
+                    if (!Directory.Exists(imagesFolder))
+                    {
+                        Directory.CreateDirectory(imagesFolder);
+                    }
+
+                    string filePath = Path.Combine(imagesFolder, newFileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+                    UpdateCompanyInfo.CompanyLogo = newFileName;
+                }
+                return await this.accountRepo.UpdateCompanyInfo(UpdateCompanyInfo);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error saving product images: " + ex.Message);
+                throw;
+            }
         }
     }
 }

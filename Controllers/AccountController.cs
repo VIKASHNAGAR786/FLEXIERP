@@ -188,8 +188,9 @@ namespace FLEXIERP.Controllers
                 });
             }
         }
+       
         [HttpPost("UpdateCompanyInfo")]
-        public async Task<IActionResult> UpdateCompanyInfo([FromBody] UpdateCompanyInfo updateCompanyInfo)
+        public async Task<IActionResult> UpdateCompanyInfo([FromForm] UpdateCompanyInfo updateCompanyInfo)
         {
             try
             {
@@ -198,7 +199,7 @@ namespace FLEXIERP.Controllers
                     return Unauthorized("User ID not found in token.");
 
                 updateCompanyInfo.UpdatedBy = userid.Value;
-                int? data = await accouuntservice.UpdateCompanyInfo(updateCompanyInfo);
+                int? data = await accouuntservice.UpdateCompanyInfo(updateCompanyInfo, updateCompanyInfo.file);
                 return Ok(data);
             }
             catch (Exception ex)

@@ -452,15 +452,46 @@ namespace FLEXIERP.DataAccessLayer
                     cmd.CommandText = "UpdateCompanyInfo";
                     cmd.CommandType = CommandType.StoredProcedure;
 
-                    // Add parameter
-                    cmd.Parameters.Add(new SqlParameter("@Company_Name", SqlDbType.VarChar) { Value = UpdateCompanyInfo.Company_Name });
-                    cmd.Parameters.Add(new SqlParameter("@Contact_No", SqlDbType.VarChar) { Value = UpdateCompanyInfo.Contact_No });
-                    cmd.Parameters.Add(new SqlParameter("@WhatsApp_No", SqlDbType.VarChar) { Value = UpdateCompanyInfo.WhatsApp_No });
-                    cmd.Parameters.Add(new SqlParameter("@Email", SqlDbType.VarChar) { Value = UpdateCompanyInfo.Email });
-                    cmd.Parameters.Add(new SqlParameter("@Address", SqlDbType.VarChar) { Value = UpdateCompanyInfo.Address });
-                    cmd.Parameters.Add(new SqlParameter("@row_id", SqlDbType.Int) { Value = UpdateCompanyInfo.row_id });
-                    cmd.Parameters.Add(new SqlParameter("@UpdatedBy   ", SqlDbType.Int) { Value = UpdateCompanyInfo.UpdatedBy });
-                    cmd.Parameters.Add(new SqlParameter("@CompanyLogo", SqlDbType.VarChar) { Value = UpdateCompanyInfo.CompanyLogo });
+                    // Add parameters
+                    cmd.Parameters.Add(new SqlParameter("@Company_Name", SqlDbType.VarChar)
+                    {
+                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.Company_Name) ? DBNull.Value : UpdateCompanyInfo.Company_Name
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@Contact_No", SqlDbType.VarChar)
+                    {
+                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.Contact_No) ? DBNull.Value : UpdateCompanyInfo.Contact_No
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@WhatsApp_No", SqlDbType.VarChar)
+                    {
+                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.WhatsApp_No) ? DBNull.Value : UpdateCompanyInfo.WhatsApp_No
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@Email", SqlDbType.VarChar)
+                    {
+                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.Email) ? DBNull.Value : UpdateCompanyInfo.Email
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@Address", SqlDbType.VarChar)
+                    {
+                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.Address) ? DBNull.Value : UpdateCompanyInfo.Address
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@row_id", SqlDbType.Int)
+                    {
+                        Value = UpdateCompanyInfo.row_id
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@UpdatedBy", SqlDbType.Int)
+                    {
+                        Value = UpdateCompanyInfo.UpdatedBy
+                    });
+
+                    cmd.Parameters.Add(new SqlParameter("@CompanyLogo", SqlDbType.VarChar)
+                    {
+                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.CompanyLogo) ? DBNull.Value : UpdateCompanyInfo.CompanyLogo
+                    });
 
                     // Execute SP
                     int rowsAffected = await cmd.ExecuteNonQueryAsync();

@@ -4,6 +4,7 @@ using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DATABASE;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -83,6 +84,19 @@ app.UseCors("AllowAll");
 // ✅ Enable Auth
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Static files
+app.UseStaticFiles();
+
+var Documents = Path.Combine(Directory.GetCurrentDirectory(), "Documents");
+if (!Directory.Exists(Documents))
+    Directory.CreateDirectory(Documents);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Documents),
+    RequestPath = "/Documents"
+});
 
 app.MapControllers();
 

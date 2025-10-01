@@ -114,6 +114,7 @@
             public int? row_id { get; set; }
             public int? UpdatedBy { get; set; }
             public string? CompanyLogo { get; set; }
+            public IFormFile? file { get; set; }
         }
 
     }
