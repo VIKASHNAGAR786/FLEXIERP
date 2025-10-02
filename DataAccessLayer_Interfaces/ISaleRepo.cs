@@ -26,5 +26,9 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
 
         #endregion
 
+        #region Sale Invoice
+        public Task<ReceiptDTO?> GetReceiptDetail(int saleId); 
+        #endregion
+
     }
 }

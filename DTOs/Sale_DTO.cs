@@ -18,6 +18,7 @@
         public decimal? SellingPrice { get; set; }
         public decimal? TaxRate { get; set; }
         public decimal? Discount { get; set; }
+        public decimal? availableQuantity { get; set; }
     }
 
     public class Sale_DTO
@@ -95,6 +96,32 @@
         public DateTime? CreatedDate { get; set; }
         public string? CreatedByName { get; set; }
         public int TotalRows { get; set; }
+    }
+    public class ReceiptCustomerDTO
+    {
+        public string CustomerName { get; set; } = string.Empty;
+        public string PhoneNo { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PaymentMode { get; set; } = string.Empty;
+        public string Remark { get; set; } = string.Empty;
+        public decimal TotalItems { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal TotalDiscount { get; set; }
+    }
+
+    public class ReceiptDetailDTO
+    {
+        public string ProductName { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public decimal Price { get; set; }
+        public decimal TotalDiscount { get; set; }
+        public decimal Tax { get; set; }
+    }
+
+    public class ReceiptDTO
+    {
+        public ReceiptCustomerDTO? CustomerInfo { get; set; }
+        public List<ReceiptDetailDTO> SaleDetails { get; set; } = new List<ReceiptDetailDTO>();
     }
 
 

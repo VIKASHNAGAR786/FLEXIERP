@@ -27,5 +27,9 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<List<CustomerWithSalesDTO>> GetCustomersWithSalesAsync(PaginationFilter pagination);
 
         #endregion
+
+        #region Sale Invoice
+        public Task<byte[]> GetReceiptPdf(int saleId, int userid);
+        #endregion
     }
 }

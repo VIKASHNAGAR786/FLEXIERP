@@ -12,6 +12,7 @@
     public class SaleDetail
     {
         public int ProductID { get; set; }
+        public decimal productquantity { get; set; }
     }
 
     public class Sale

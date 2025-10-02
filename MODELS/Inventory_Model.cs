@@ -24,6 +24,7 @@
         public decimal? SellingPrice { get; set; }
         public decimal? TaxRate { get; set; }
         public decimal? Discount { get; set; }
+        public required decimal productQunatity { get; set; }
     }
 
     public class PaginationFilter

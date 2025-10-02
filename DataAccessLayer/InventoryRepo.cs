@@ -142,6 +142,7 @@ namespace FLEXIERP.DataAccessLayer
                     cmd.Parameters.Add(new SqlParameter("@SellingPrice", SqlDbType.Decimal) { Value = (object)product.SellingPrice ?? DBNull.Value, Precision = 18, Scale = 2 });
                     cmd.Parameters.Add(new SqlParameter("@TaxRate", SqlDbType.Decimal) { Value = (object)product.TaxRate ?? DBNull.Value, Precision = 18, Scale = 2 });
                     cmd.Parameters.Add(new SqlParameter("@Discount", SqlDbType.Decimal) { Value = (object)product.Discount ?? DBNull.Value, Precision = 18, Scale = 2 });
+                    cmd.Parameters.Add(new SqlParameter("@productQuantity", SqlDbType.Decimal) { Value = (object)product.productQunatity, Precision = 18, Scale = 2 });
 
                     // Execute and get the generated barcode
                     var result = await cmd.ExecuteScalarAsync();

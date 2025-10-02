@@ -67,7 +67,8 @@ namespace FLEXIERP.DataAccessLayer
                         PurchasePrice = !reader.IsDBNull(12) ? reader.GetDecimal(12) : null,
                         SellingPrice = !reader.IsDBNull(13) ? reader.GetDecimal(13) : null,
                         TaxRate = !reader.IsDBNull(14) ? reader.GetDecimal(14) : null,
-                        Discount = !reader.IsDBNull(15) ? reader.GetDecimal(15) : null
+                        Discount = !reader.IsDBNull(15) ? reader.GetDecimal(15) : null,
+                        availableQuantity = !reader.IsDBNull(16) ? reader.GetDecimal(16) : null,
                     };
                 }
             }
@@ -188,10 +189,11 @@ namespace FLEXIERP.DataAccessLayer
                 var tvp = new DataTable();
                 tvp.Columns.Add("ProductID", typeof(int));
                 tvp.Columns.Add("CreatedBy", typeof(int));
+                tvp.Columns.Add("ProductQuantity", typeof(decimal));
 
                 foreach (var detail in sale.SaleDetails)
                 {
-                    tvp.Rows.Add(detail.ProductID, sale.CreatedBy ?? (object)DBNull.Value);
+                    tvp.Rows.Add(detail.ProductID, sale.CreatedBy ?? (object)DBNull.Value, detail.productquantity);
                 }
 
                 var tvpParam = cmd.Parameters.AddWithValue("@SaleDetails", tvp);
@@ -372,6 +374,69 @@ namespace FLEXIERP.DataAccessLayer
             }
 
             return customers;
+        }
+
+        #endregion
+
+        #region Sale Invoice
+        public async Task<ReceiptDTO?> GetReceiptDetail(int saleId)
+        {
+            ReceiptDTO? receipt = new ReceiptDTO();
+
+            try
+            {
+                using var connection = sqlconnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "GetReceiptDetail";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add(new SqlParameter("@SaleID", SqlDbType.Int) { Value = saleId });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                // First result set: Customer + Sale Info
+                if (await reader.ReadAsync())
+                {
+                    receipt.CustomerInfo = new ReceiptCustomerDTO
+                    {
+                        CustomerName = !reader.IsDBNull(0) ? reader.GetString(0) : string.Empty,
+                        PhoneNo = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        Email = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        PaymentMode = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        Remark = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        TotalItems = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0,
+                        TotalAmount = !reader.IsDBNull(6) ? reader.GetDecimal(6) : 0,
+                        TotalDiscount = !reader.IsDBNull(7) ? reader.GetDecimal(7) : 0
+                    };
+                }
+
+                // Move to second result set
+                if (await reader.NextResultAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        receipt.SaleDetails.Add(new ReceiptDetailDTO
+                        {
+                            ProductName = !reader.IsDBNull(0) ? reader.GetString(0) : string.Empty,
+                            Quantity = !reader.IsDBNull(1) ? reader.GetDecimal(1) : 0,
+                            Price = !reader.IsDBNull(2) ? reader.GetDecimal(2) : 0,
+                            TotalDiscount = !reader.IsDBNull(3) ? reader.GetDecimal(3) : 0,
+                            Tax = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0
+                        });
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve receipt details. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlconnection.GetConnection().CloseAsync();
+            }
+
+            return receipt;
         }
 
         #endregion
