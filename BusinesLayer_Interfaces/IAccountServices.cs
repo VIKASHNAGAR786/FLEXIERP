@@ -13,5 +13,8 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<int> UpdateCompanyInfo(UpdateCompanyInfo UpdateCompanyInfo, IFormFile? file);
 
 
+        #region
+        public Task<int> Savecustomerledger(Customerledgermodel customerLedger);
+        #endregion
     }
 }

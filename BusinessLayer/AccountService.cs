@@ -130,5 +130,12 @@ namespace FLEXIERP.BusinessLayer
                 throw;
             }
         }
+
+        #region Customer Ledger
+        public Task<int> Savecustomerledger(Customerledgermodel customerledger)
+        {
+            return accountRepo.Savecustomerledger(customerledger);
+        }
+        #endregion
     }
 }

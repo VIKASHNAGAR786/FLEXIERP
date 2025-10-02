@@ -13,5 +13,9 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId);
         public Task<int> UpdateCompanyInfo(UpdateCompanyInfo UpdateCompanyInfo);
 
+        #region Customer Ledger
+        public Task<int> Savecustomerledger(Customerledgermodel customerledger);
+        #endregion
+
     }
 }

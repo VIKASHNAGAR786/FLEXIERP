@@ -117,6 +117,16 @@
             public IFormFile? file { get; set; }
         }
 
+        public class Customerledgermodel
+        {
+            public decimal? paidamount { get; set; }
+            public decimal? balancedue { get; set; }
+            public decimal Totalamount { get; set; }
+            public int paymentmode { get; set; }
+            public string? transactiontype { get; set; }
+            public int createby { get; set; }
+        }
+
     }
 
 }

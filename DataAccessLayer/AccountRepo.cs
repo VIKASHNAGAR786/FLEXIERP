@@ -508,5 +508,65 @@ namespace FLEXIERP.DataAccessLayer
                 await sqlConnection.GetConnection().CloseAsync();
             }
         }
+        #region Customer Ledger
+        public async Task<int> Savecustomerledger(Customerledgermodel customerledger)
+        {
+            try
+            {
+                var connection = sqlConnection.GetConnection();
+                await connection.OpenAsync();
+
+                using (var insertCmd = connection.CreateCommand())
+                {
+                    insertCmd.CommandText = "usp_Customer_Ledger_insert";
+                    insertCmd.CommandType = CommandType.StoredProcedure;
+
+                    insertCmd.Parameters.Add(new SqlParameter("@paid_amt", SqlDbType.Decimal)
+                    {
+                        Value = customerledger.paidamount
+                    });
+                    insertCmd.Parameters.Add(new SqlParameter("@balance_due", SqlDbType.Decimal)
+                    {
+                        Value = customerledger.balancedue 
+                    });
+                    insertCmd.Parameters.Add(new SqlParameter("@total_amt", SqlDbType.Decimal)
+                    {
+                        Value = customerledger.Totalamount
+                    });
+                    insertCmd.Parameters.Add(new SqlParameter("@payment_mode", SqlDbType.Int)
+                    {
+                        Value = customerledger.paymentmode
+                    });
+                    insertCmd.Parameters.Add(new SqlParameter("@transaction_type", SqlDbType.VarChar)
+                    {
+                        Value = customerledger.transactiontype
+                    });
+                    insertCmd.Parameters.Add(new SqlParameter("@CreatedBy", SqlDbType.Int)
+                    {
+                        Value = customerledger.createby
+                    });
+
+                    // Execute and get inserted CategoryID
+                    var result = await insertCmd.ExecuteScalarAsync();
+                    if (result == null || Convert.ToInt32(result) <= 0)
+                    {
+                        throw new Exception("Customer Ledger insertion failed. Please try again.");
+                    }
+
+                    int lastinsertid = Convert.ToInt32(result);
+                    return lastinsertid;
+                }
+            }
+            catch (SqlException ex)
+            {
+                // You can log ex.Message here for debugging
+                throw new Exception("Customer Ledger insertion failed. Please try again later.");
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+        }
+        #endregion
     }
 }

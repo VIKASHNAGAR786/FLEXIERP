@@ -214,5 +214,28 @@ namespace FLEXIERP.Controllers
         }
         #endregion
 
+        #region Customer Ledger
+        [HttpPost]
+        [Route("Savecustomerledger")]
+        public async Task<ActionResult<Customerledgermodel>> Savecustomerledger([FromBody] Customerledgermodel customerledger)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                customerledger.createby = userid.Value;
+
+                var addedCategory = await IAccountServices.Savecustomerledger(customerledger);
+                return Ok(addedCategory);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
     }
 }
