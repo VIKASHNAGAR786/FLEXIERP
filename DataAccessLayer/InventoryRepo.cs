@@ -143,7 +143,8 @@ namespace FLEXIERP.DataAccessLayer
                     cmd.Parameters.Add(new SqlParameter("@TaxRate", SqlDbType.Decimal) { Value = (object)product.TaxRate ?? DBNull.Value, Precision = 18, Scale = 2 });
                     cmd.Parameters.Add(new SqlParameter("@Discount", SqlDbType.Decimal) { Value = (object)product.Discount ?? DBNull.Value, Precision = 18, Scale = 2 });
                     cmd.Parameters.Add(new SqlParameter("@productQuantity", SqlDbType.Decimal) { Value = (object)product.productQunatity, Precision = 18, Scale = 2 });
-
+                    cmd.Parameters.Add(new SqlParameter("@TaxPr", SqlDbType.Decimal) { Value = (object)product.taxpr, Precision = 18, Scale = 2 });
+                    cmd.Parameters.Add(new SqlParameter("@DiscountPr", SqlDbType.Decimal) { Value = (object)product.discounpr, Precision = 18, Scale = 2 });
                     // Execute and get the generated barcode
                     var result = await cmd.ExecuteScalarAsync();
                     if (result == null || string.IsNullOrEmpty(result.ToString()))
@@ -212,7 +213,9 @@ namespace FLEXIERP.DataAccessLayer
                         TaxRate = !reader.IsDBNull(15) ? reader.GetDecimal(15) : null,
                         Discount = !reader.IsDBNull(16) ? reader.GetDecimal(16) : null,
                         FullName = !reader.IsDBNull(17) ? reader.GetString(17) : string.Empty,
-                        TotalRecords = !reader.IsDBNull(18) ? reader.GetInt32(18) : 0
+                        TotalRecords = !reader.IsDBNull(18) ? reader.GetInt32(18) : 0,
+                        taxpr = !reader.IsDBNull(19) ? reader.GetDecimal(19) : 0,
+                        discounpr = !reader.IsDBNull(20) ? reader.GetDecimal(20) : 0,
                     });
                 }
             }

@@ -24,6 +24,8 @@
         public decimal? SellingPrice { get; set; }
         public decimal? TaxRate { get; set; }
         public decimal? Discount { get; set; }
+        public decimal? taxpr { get; set; }
+        public decimal? discounpr { get; set; }
         public required decimal productQunatity { get; set; }
     }
 

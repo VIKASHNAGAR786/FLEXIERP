@@ -142,6 +142,30 @@ namespace FLEXIERP.DataAccessLayer
                     Direction = ParameterDirection.Input
                 });
 
+                cmd.Parameters.Add(new SqlParameter("@paid_amt", SqlDbType.Decimal)
+                {
+                    Value = (object?)sale.Customer?.PaidAmt ?? DBNull.Value,
+                    Direction = ParameterDirection.Input
+                });
+
+                cmd.Parameters.Add(new SqlParameter("@balance_due", SqlDbType.Decimal)
+                {
+                    Value = (object?)sale.Customer?.BalanceDue ?? DBNull.Value,
+                    Direction = ParameterDirection.Input
+                });
+
+                cmd.Parameters.Add(new SqlParameter("@total_amt", SqlDbType.Decimal)
+                {
+                    Value = (object?)sale.Customer?.TotalAmt ?? DBNull.Value,
+                    Direction = ParameterDirection.Input
+                });
+
+                cmd.Parameters.Add(new SqlParameter("@transaction_type", SqlDbType.VarChar)
+                {
+                    Value = (object?)sale.Customer?.TransactionType ?? DBNull.Value,
+                    Direction = ParameterDirection.Input
+                });
+
                 cmd.Parameters.Add(new SqlParameter("@TotalItems", SqlDbType.Decimal)
                 {
                     Precision = 10,

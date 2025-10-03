@@ -27,6 +27,8 @@
         public decimal? Discount { get; set; }
         public string? FullName { get; set; }
         public int? TotalRecords { get; set; }
+        public decimal? taxpr { get; set; }
+        public decimal? discounpr { get; set; }
     }
     public class Warehouse_DTO
     {

@@ -8,6 +8,12 @@
         public string Email { get; set; }
         public int? PaymentMode { get; set; }
         public string? Remark { get; set; }
+
+        // customer ledger
+        public decimal? PaidAmt { get; set; }         // @paid_amt
+        public decimal? BalanceDue { get; set; }      // @balance_due
+        public decimal? TotalAmt { get; set; }        // @total_amt
+        public string? TransactionType { get; set; }  // @transaction_type
     }
     public class SaleDetail
     {
