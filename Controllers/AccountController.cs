@@ -226,7 +226,7 @@ namespace FLEXIERP.Controllers
                     return Unauthorized("User ID not found in token.");
                 customerledger.createby = userid.Value;
 
-                var addedCategory = await IAccountServices.Savecustomerledger(customerledger);
+                var addedCategory = await accouuntservice.Savecustomerledger(customerledger);
                 return Ok(addedCategory);
             }
             catch (Exception ex)
