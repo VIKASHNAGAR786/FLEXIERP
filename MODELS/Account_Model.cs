@@ -140,6 +140,21 @@
             public int? rowid { get; set; }
         }
 
+        public record CustomerledgerdetailDto
+        {
+            public int customerid { get; set; }
+            public decimal paidamt { get; set; }
+            public string? transactiontype { get; set; }
+            public decimal totalamount { get; set; }
+            public decimal balancedue { get; set; }
+            public string? transactiondate { get; set; }
+            public string? saledate { get; set; }
+            public decimal totalitems { get; set; }
+            public decimal totaldiscount { get; set; }
+            public int paymentmode { get; set; }
+            public int? rowid { get; set; }
+        }
+
     }
 
 }

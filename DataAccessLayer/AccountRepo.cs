@@ -613,6 +613,51 @@ namespace FLEXIERP.DataAccessLayer
 
             return historyList;
         }
+
+        public async Task<CustomerledgerdetailDto?> GetCustomerledgerdetails(int customerid)
+        {
+            CustomerledgerdetailDto? companyInfo = null;
+            try
+            {
+                using var connection = sqlConnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_Customer_Ledger_Details_get";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new SqlParameter("@CustomerID", SqlDbType.Int) { Value = customerid });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    companyInfo = new CustomerledgerdetailDto
+                    {
+                        rowid = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        customerid = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
+                        paidamt = !reader.IsDBNull(2) ? reader.GetDecimal(2) : decimal.MaxValue,
+                        balancedue = !reader.IsDBNull(3) ? reader.GetDecimal(3) : decimal.MaxValue,
+                        totalamount = !reader.IsDBNull(4) ? reader.GetDecimal(4) : decimal.MaxValue,
+                        paymentmode = !reader.IsDBNull(5) ? reader.GetInt32(5) : 0,
+                        transactiontype = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
+                        transactiondate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
+                        saledate = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
+                        totalitems = !reader.IsDBNull(9) ? reader.GetDecimal(9) : decimal.MaxValue,
+                        totaldiscount = !reader.IsDBNull(10) ? reader.GetDecimal(10) : decimal.MaxValue,
+                    };
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve company info. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+
+            return companyInfo;
+        }
         #endregion
     }
 }

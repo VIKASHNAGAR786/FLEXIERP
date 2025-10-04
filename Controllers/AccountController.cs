@@ -258,6 +258,29 @@ namespace FLEXIERP.Controllers
                 });
             }
         }
+
+        [HttpGet("GetCustomerledgerdetails")]
+        public async Task<IActionResult> GetCustomerledgerdetails([FromQuery] int customerid)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                CustomerledgerdetailDto? data = await accouuntservice.GetCustomerledgerdetails(customerid);
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                // You can log ex.Message here using ILogger
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving customer ledger data.",
+                    details = ex.Message
+                });
+            }
+        }
         #endregion
 
     }
