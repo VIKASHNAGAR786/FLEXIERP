@@ -136,6 +136,10 @@ namespace FLEXIERP.BusinessLayer
         {
             return accountRepo.Savecustomerledger(customerledger);
         }
+        public async Task<IEnumerable<CustomerledgerDto?>> GetCustomerledger(int pageNo = 1, int pageSize = 20)
+        {
+            return await this.accountRepo.GetCustomerledger(pageNo, pageSize);
+        }
         #endregion
     }
 }

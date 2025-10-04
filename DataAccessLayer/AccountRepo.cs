@@ -567,6 +567,52 @@ namespace FLEXIERP.DataAccessLayer
                 await sqlConnection.GetConnection().CloseAsync();
             }
         }
+
+        public async Task<IEnumerable<CustomerledgerDto?>> GetCustomerledger(int pageNo = 1, int pageSize = 20)
+        {
+            var historyList = new List<CustomerledgerDto?>();
+
+            try
+            {
+                using var connection = sqlConnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "usp_Customer_Ledger_Summary_get";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                // Add parameters
+                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pageNo });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pageSize });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    historyList.Add(new CustomerledgerDto
+                    {
+                        customerid = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        Customername = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        ContactNo = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        CustomerAddress = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        Email = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        totalamount = !reader.IsDBNull(5) ? reader.GetDecimal(5) : decimal.MaxValue,
+                        totaldue = !reader.IsDBNull(6) ? reader.GetDecimal(6) : decimal.MaxValue,
+                        lasttransactiondate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
+                        rowid = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0
+                    });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve customer ledger data. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+
+            return historyList;
+        }
         #endregion
     }
 }

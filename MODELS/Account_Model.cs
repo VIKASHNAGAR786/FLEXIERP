@@ -127,6 +127,19 @@
             public int createby { get; set; }
         }
 
+        public record CustomerledgerDto
+        {
+            public int customerid { get; set; }
+            public string? Customername { get; set; }
+            public string? ContactNo { get; set; }
+            public string? Email { get; set; }
+            public string? CustomerAddress { get; set; }
+            public decimal totalamount { get; set; }
+            public decimal totaldue { get; set; }
+            public string? lasttransactiondate { get; set; }
+            public int? rowid { get; set; }
+        }
+
     }
 
 }
