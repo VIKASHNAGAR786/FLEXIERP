@@ -202,6 +202,12 @@ namespace FLEXIERP.DataAccessLayer
                     Direction = ParameterDirection.Input
                 });
 
+                cmd.Parameters.Add(new SqlParameter("@payid", SqlDbType.Int)
+                {
+                    Value = (object?)sale.Customer?.payid ?? DBNull.Value,
+                    Direction = ParameterDirection.Input
+                });
+
                 // 2️⃣ Output SaleID
                 var saleIdParam = new SqlParameter("@SaleID", SqlDbType.Int)
                 {

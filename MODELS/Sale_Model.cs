@@ -14,6 +14,7 @@
         public decimal? BalanceDue { get; set; }      // @balance_due
         public decimal? TotalAmt { get; set; }        // @total_amt
         public string? TransactionType { get; set; }  // @transaction_type
+        public int payid { get; set; }          // @payid
     }
     public class SaleDetail
     {
