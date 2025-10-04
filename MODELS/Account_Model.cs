@@ -153,6 +153,7 @@
             public decimal totaldiscount { get; set; }
             public int paymentmode { get; set; }
             public int? rowid { get; set; }
+            public decimal? tax { get; set; }
         }
 
     }

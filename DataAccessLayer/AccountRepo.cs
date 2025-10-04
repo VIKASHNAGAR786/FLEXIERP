@@ -644,6 +644,7 @@ namespace FLEXIERP.DataAccessLayer
                         saledate = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
                         totalitems = !reader.IsDBNull(9) ? reader.GetDecimal(9) : decimal.MaxValue,
                         totaldiscount = !reader.IsDBNull(10) ? reader.GetDecimal(10) : decimal.MaxValue,
+                        tax = !reader.IsDBNull(11) ? reader.GetDecimal(11) : decimal.MaxValue
                     };
                 }
             }
