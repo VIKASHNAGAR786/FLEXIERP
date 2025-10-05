@@ -102,7 +102,7 @@ namespace FLEXIERP.DataAccessLayer
                 // 1️⃣ Sale parameters
                 cmd.Parameters.Add(new SqlParameter("@CustomerID", SqlDbType.Int)
                 {
-                    Value = (object?)sale.CustomerID ?? DBNull.Value,
+                    Value = (object?)sale.customerID ?? DBNull.Value,
                     Direction = ParameterDirection.Input
                 });
 

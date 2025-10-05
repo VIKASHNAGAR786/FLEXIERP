@@ -14,7 +14,7 @@
         public decimal? BalanceDue { get; set; }      // @balance_due
         public decimal? TotalAmt { get; set; }        // @total_amt
         public string? TransactionType { get; set; }  // @transaction_type
-        public int payid { get; set; }          // @payid
+        public int payid { get; set; } = 1;        // @payid
     }
     public class SaleDetail
     {
@@ -24,7 +24,7 @@
 
     public class Sale
     {
-        public int? CustomerID { get; set; } // Nullable if new customer
+        public int? customerID { get; set; } // Nullable if new customer
         public Customer? Customer { get; set; }  // Optional
         public decimal TotalItems { get; set; }
         public decimal TotalAmount { get; set; }
