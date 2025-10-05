@@ -614,9 +614,9 @@ namespace FLEXIERP.DataAccessLayer
             return historyList;
         }
 
-        public async Task<CustomerledgerdetailDto?> GetCustomerledgerdetails(int customerid)
+        public async Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid)
         {
-            CustomerledgerdetailDto? companyInfo = null;
+            List<CustomerledgerdetailDto>? companyInfo = new List<CustomerledgerdetailDto>();
             try
             {
                 using var connection = sqlConnection.GetConnection();
@@ -629,9 +629,9 @@ namespace FLEXIERP.DataAccessLayer
                 cmd.Parameters.Add(new SqlParameter("@CustomerID", SqlDbType.Int) { Value = customerid });
 
                 using var reader = await cmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
+                while (await reader.ReadAsync())
                 {
-                    companyInfo = new CustomerledgerdetailDto
+                    var data = new CustomerledgerdetailDto
                     {
                         rowid = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
                         customerid = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
@@ -644,9 +644,13 @@ namespace FLEXIERP.DataAccessLayer
                         saledate = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
                         totalitems = !reader.IsDBNull(9) ? reader.GetDecimal(9) : decimal.MaxValue,
                         totaldiscount = !reader.IsDBNull(10) ? reader.GetDecimal(10) : decimal.MaxValue,
-                        tax = !reader.IsDBNull(11) ? reader.GetDecimal(11) : decimal.MaxValue
+                        tax = !reader.IsDBNull(11) ? reader.GetDecimal(11) : decimal.MaxValue,
+                        customername = !reader.IsDBNull(12) ? reader.GetString(12) : string.Empty,
+                        contactno = !reader.IsDBNull(13) ? reader.GetString(13) : string.Empty
                     };
+                    companyInfo.Add(data);
                 }
+                return companyInfo;
             }
             catch (SqlException ex)
             {

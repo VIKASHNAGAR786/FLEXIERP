@@ -140,7 +140,7 @@ namespace FLEXIERP.BusinessLayer
         {
             return await this.accountRepo.GetCustomerledger(pageNo, pageSize);
         }
-        public async Task<CustomerledgerdetailDto?> GetCustomerledgerdetails(int customerid)
+        public async Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid)
         {
             return await this.accountRepo.GetCustomerledgerdetails(customerid);
         }

@@ -154,6 +154,8 @@
             public int paymentmode { get; set; }
             public int? rowid { get; set; }
             public decimal? tax { get; set; }
+            public string? customername { get; set; }
+            public string? contactno { get; set; }
         }
 
     }

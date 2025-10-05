@@ -268,7 +268,7 @@ namespace FLEXIERP.Controllers
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
 
-                CustomerledgerdetailDto? data = await accouuntservice.GetCustomerledgerdetails(customerid);
+                IEnumerable<CustomerledgerdetailDto?> data = await accouuntservice.GetCustomerledgerdetails(customerid);
                 return Ok(data);
             }
             catch (Exception ex)
