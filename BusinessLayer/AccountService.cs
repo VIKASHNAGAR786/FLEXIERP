@@ -1,8 +1,17 @@
 ﻿using DocumentFormat.OpenXml.Spreadsheet;
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
+using FLEXIERP.MODELS;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
+using Microsoft.AspNetCore.Mvc;
+using QuestPDF.Drawing;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using QuestPDF.Previewer;
 using Razorpay.Api;
+using System.Runtime.Intrinsics.X86;
+using Colors = QuestPDF.Helpers.Colors;
 
 namespace FLEXIERP.BusinessLayer
 {
@@ -144,6 +153,102 @@ namespace FLEXIERP.BusinessLayer
         {
             return await this.accountRepo.GetCustomerledgerdetails(customerid);
         }
+
+
+        public async Task<byte[]> GetCustomerledgerdetailspdf(int customerid)
+        {
+            List<CustomerledgerdetailDto?> data = (List<CustomerledgerdetailDto?>)await this.accountRepo.GetCustomerledgerdetails(customerid);
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(20);
+                    page.DefaultTextStyle(TextStyle.Default.FontSize(10));
+
+                    // --- Header ---
+                    page.Header().Row(header =>
+                    {
+                        header.RelativeColumn().Text("Customer Ledger Report").FontSize(16).Bold().FontColor(Colors.Blue.Medium);
+                        header.ConstantColumn(100).Text($"Date: {DateTime.Now:dd-MMM-yyyy}").FontSize(9).AlignRight();
+                    });
+
+                    page.Content().Column(content =>
+                    {
+                        // --- Customer Info ---
+                        content.Item().Padding(10).Background(Colors.Grey.Darken3.WithAlpha(0.6f)).Border(1).BorderColor(Colors.Teal.Medium)
+                            .Row(row =>
+                            {
+                                row.RelativeColumn().Text($"Party Name: {data[0]!.customername!.ToUpper()}")
+                                    .FontColor(Colors.White)
+                                    .SemiBold();
+
+                                row.RelativeColumn().Text($"Contact No: {data[0]!.contactno}")
+                                    .FontColor(Colors.White);
+                            });
+
+                        content.Item().PaddingTop(10);
+
+                        // --- Table ---
+                        content.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                for (int i = 0; i < 10; i++)
+                                    columns.RelativeColumn();
+                            });
+
+                            // Header
+                            table.Header(header =>
+                            {
+                                string[] headers = new[]
+                                {
+                                "Paid Amount","Balance Due","Total Amt","Payment Mode",
+                                "Transaction Type","Sale Date","Total Items","Discount","Tax","Transaction Date"
+                            };
+
+                                foreach (var h in headers)
+                                    header.Cell().Element(CellHeaderStyle).Text(h);
+
+                                static IContainer CellHeaderStyle(IContainer container) =>
+                                    container.Background(Colors.Blue.Medium)
+                                             .Padding(5)
+                                             .AlignCenter()
+                                             .DefaultTextStyle(TextStyle.Default.FontColor(Colors.White).SemiBold());
+                            });
+
+                            // Rows
+                            foreach (var record in data)
+                            {
+                                table.Cell().Element(CellStyle).Text(record.paidamt.ToString("F2")).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.balancedue.ToString("F2")).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.totalamount.ToString("F2")).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.paymentmode.ToString()).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.transactiontype).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.saledate.ToString()).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.totalitems.ToString()).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.totaldiscount.ToString("F2")).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.tax.ToString()).AlignCenter();
+                                table.Cell().Element(CellStyle).Text(record.transactiondate.ToString()).AlignCenter();
+                            }
+
+                           
+
+                            static IContainer CellStyle(IContainer container) =>
+                                container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
+                                         .Padding(4);
+                        });
+                    });
+
+                    // --- Footer ---
+                    page.Footer().AlignCenter()
+                        .Text("Thank you for your business!").FontColor(Colors.Grey.Medium);
+                });
+            });
+
+            return document.GeneratePdf();
+        }
+
         #endregion
     }
 }

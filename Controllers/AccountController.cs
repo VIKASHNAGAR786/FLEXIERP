@@ -1,4 +1,5 @@
 ﻿using FLEXIERP.BusinesLayer_Interfaces;
+using FLEXIERP.BusinessLayer;
 using FLEXIERP.MODELS;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
 using FLEXIERP.Services;
@@ -279,6 +280,24 @@ namespace FLEXIERP.Controllers
                     message = "An error occurred while retrieving customer ledger data.",
                     details = ex.Message
                 });
+            }
+        }
+
+        [HttpGet("GetCustomerledgerdetailspdf")]
+        public async Task<IActionResult> GetCustomerledgerdetailspdf([FromQuery] int customerid)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var pdfBytes = await accouuntservice.GetCustomerledgerdetailspdf(customerid);
+                return File(pdfBytes, "application/pdf", "GetCustomerledgerdetailspdf.pdf");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
             }
         }
         #endregion

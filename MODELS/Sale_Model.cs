@@ -13,7 +13,7 @@
         public decimal? PaidAmt { get; set; }         // @paid_amt
         public decimal? BalanceDue { get; set; }      // @balance_due
         public decimal? TotalAmt { get; set; }        // @total_amt
-        public string? TransactionType { get; set; }  // @transaction_type
+        public string? TransactionType { get; set; } = "SALE"; // @transaction_type
         public int payid { get; set; } = 1;        // @payid
     }
     public class SaleDetail
