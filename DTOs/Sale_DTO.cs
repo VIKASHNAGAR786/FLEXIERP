@@ -107,6 +107,8 @@
         public decimal TotalItems { get; set; }
         public decimal TotalAmount { get; set; }
         public decimal TotalDiscount { get; set; }
+        public decimal paidamt { get; set; }
+        public decimal baldue { get; set; }
     }
 
     public class ReceiptDetailDTO

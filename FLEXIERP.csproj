@@ -15,6 +15,7 @@
 	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.105.0" />
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+		<PackageReference Include="QuestPDF" Version="2025.7.2" />
 		<PackageReference Include="Razorpay" Version="3.3.2" />
 		<PackageReference Include="Select.HtmlToPdf.NetCore" Version="25.2.0" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />

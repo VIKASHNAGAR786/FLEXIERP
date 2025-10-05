@@ -6,10 +6,14 @@ using FLEXIERP.DATABASE;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
+using QuestPDF.Infrastructure;
 using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//quest pdf use
+QuestPDF.Settings.License = LicenseType.Community;
 
 // Services DI
 builder.Services.AddTransient<IDataBaseOperation, DataBaseOperation>();

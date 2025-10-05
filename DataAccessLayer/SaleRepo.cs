@@ -437,7 +437,9 @@ namespace FLEXIERP.DataAccessLayer
                         Remark = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
                         TotalItems = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0,
                         TotalAmount = !reader.IsDBNull(6) ? reader.GetDecimal(6) : 0,
-                        TotalDiscount = !reader.IsDBNull(7) ? reader.GetDecimal(7) : 0
+                        TotalDiscount = !reader.IsDBNull(7) ? reader.GetDecimal(7) : 0,
+                        paidamt = !reader.IsDBNull(8) ? reader.GetDecimal(8) : 0,
+                        baldue = !reader.IsDBNull(9) ? reader.GetDecimal(9) : 0
                     };
                 }
 

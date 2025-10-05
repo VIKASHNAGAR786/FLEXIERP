@@ -6,7 +6,14 @@ using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using FLEXIERP.MODELS.AGRIMANDI.Model;
+using QuestPDF;
+using QuestPDF.Fluent;
 using SelectPdf;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using QuestPDF.Drawing;
+using QuestPDF.Previewer;
+
 
 namespace FLEXIERP.BusinessLayer
 {
@@ -245,11 +252,11 @@ namespace FLEXIERP.BusinessLayer
         #endregion
 
         #region Sale Invoice
-        public async Task<byte[]> GetReceiptPdf(int saleId, int userid)
+        public async Task<byte[]> GetReceiptPdf(int saleId, int userId)
         {
             // Fetch data
-            var receipt = await _saleRepo.GetReceiptDetail(saleId); // Uses your procedure
-            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
+            var receipt = await _saleRepo.GetReceiptDetail(saleId);
+            var company = await accountRepo.GetCompanyInfoByUserAsync(userId);
 
             if (receipt == null || receipt.CustomerInfo == null)
                 throw new Exception("Receipt data not found.");
@@ -257,112 +264,158 @@ namespace FLEXIERP.BusinessLayer
             var customer = receipt.CustomerInfo;
             var details = receipt.SaleDetails;
 
-            // Build HTML
-            var html = $@"
-<html>
-<head>
-    <style>
-        body {{ font-family: Arial, sans-serif; font-size: 10pt; margin: 10px; color: #333; }}
-        .company-header h1 {{ font-size: 16pt; margin: 0; }}
-        .company-header h3 {{ font-size: 9pt; margin: 2px 0; color: #666; }}
-        .title {{ font-size: 14pt; font-weight: bold; margin: 10px 0; }}
-        .invoice-header {{ display:flex; justify-content:space-between; margin-bottom:10px; }}
-        .section-title {{ font-weight:bold; margin:10px 0 5px 0; font-size:11pt; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
-        th, td {{ border: 1px solid #ccc; padding: 6px; text-align: center; font-size: 9pt; }}
-        th {{ background-color: #00bfff; color: white; }}
-        .total-row td {{ font-weight: bold; font-size: 11pt; }}
-    </style>
-</head>
-<body>
-    <!-- Company Info -->
-    <div class='company-header'>
-        <h1>{company.CompanyName}</h1>
-        <h3>{company.Address}</h3>
-        <h3>Phone: {company.ContactNo} | Email: {company.Email}</h3>
-    </div>
+            decimal grandTotal = details.Sum(d => d.Price);
 
-    <!-- Invoice / Header -->
-    <div class='invoice-header'>
-        <div class='title'>Invoice / Receipt</div>
-        <div>Date: {DateTime.Now:dd-MM-yyyy HH:mm}</div>
-    </div>
-
-    <!-- Customer Info -->
-    <div class='section-title'>Customer Information</div>
-    <table>
-        <tr><td><b>Name:</b> {customer.CustomerName}</td></tr>
-        <tr><td><b>Phone:</b> {customer.PhoneNo}</td></tr>
-        <tr><td><b>Email:</b> {customer.Email}</td></tr>
-        <tr><td><b>Payment Mode:</b> {customer.PaymentMode}</td></tr>
-        <tr><td><b>Remark:</b> {customer.Remark}</td></tr>
-    </table>
-
-    <!-- Sale Details -->
-    <table>
-        <thead>
-            <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Discount</th>
-                <th>Tax</th>
-                <th>Total</th>
-            </tr>
-        </thead>
-        <tbody>";
-
-            decimal grandTotal = 0;
-            foreach (var d in details)
+            // Create the PDF document
+            // Create the PDF document
+            var document = Document.Create(container =>
             {
-                decimal total = d.Price; // already includes Quantity * SellingPrice
-                grandTotal += total;
+                container.Page(page =>
+                {
+                    page.Margin(30);
+                    page.Size(PageSizes.A4);
+                    page.DefaultTextStyle(TextStyle.Default.FontSize(10));
 
-                html += $@"
-            <tr>
-                <td>{d.ProductName}</td>
-                <td>{d.Quantity}</td>
-                <td>{d.Price}</td>
-                <td>{d.TotalDiscount}</td>
-                <td>{d.Tax}</td>
-                <td>{total}</td>
-            </tr>";
-            }
+                    // --- Background watermark ---
+                    page.Background().AlignCenter().AlignMiddle().Element(container =>
+                    {
+                        container.Rotate(-45) // rotate diagonally
+                                 .Text(company.CompanyName)
+                                 .FontSize(80)
+                                 .Bold()
+                                 .FontColor(Colors.Grey.Lighten3)
+                                 .AlignCenter(); // center the text inside the rotated container
+                    });
 
-            html += $@"
-        </tbody>
-        <tfoot>
-            <tr class='total-row'>
-                <td colspan='5' style='text-align:right;'>Grand Total:</td>
-                <td>{grandTotal}</td>
-            </tr>
-        </tfoot>
-    </table>
-</body>
-</html>";
 
-            // Convert HTML to PDF
-            HtmlToPdf converter = new HtmlToPdf();
-            converter.Options.MarginTop = 10;
-            converter.Options.MarginBottom = 10;
-            converter.Options.MarginLeft = 10;
-            converter.Options.MarginRight = 10;
-            converter.Options.EmbedFonts = false;         // use system fonts only
-            converter.Options.MaxPageLoadTime = 30;       // limit timeout
-                                                         
 
-            // converter.Options.MinimizeJavaScript = true;   // disables JS eval
+                    // --- Header ---
+                    page.Header().Column(header =>
+                    {
+                        header.Item().Row(row =>
+                        {
+                            row.RelativeColumn().Column(col =>
+                            {
+                                col.Item().Text(company.CompanyName).FontSize(16).Bold().FontColor(Colors.Blue.Medium);
+                                col.Item().Text($"{company.Address}").FontSize(10).FontColor(Colors.Grey.Darken2);
+                                col.Item().Text($"Phone: {company.ContactNo} | Email: {company.Email}")
+                                    .FontSize(9).FontColor(Colors.Grey.Darken1);
+                            });
 
-            // Replace it with nothing (just remove the line). The rest of the options are valid and can remain.
-            PdfDocument doc = converter.ConvertHtmlString(html);
+                            row.ConstantColumn(80).AlignRight().AlignMiddle().Element(e =>
+                            {
+                                var logoPath = string.IsNullOrWhiteSpace(company.CompanyLogo)
+                                    ? null
+                                    : Path.Combine("Documents", company.CompanyLogo);
 
-            using var stream = new MemoryStream();
-            doc.Save(stream);
-            doc.Close();
+                                if (!string.IsNullOrWhiteSpace(logoPath) && File.Exists(logoPath))
+                                    e.Image(logoPath, ImageScaling.FitArea);
+                                else
+                                    e.Border(1).BorderColor(Colors.Grey.Lighten2)
+                                     .AlignCenter().AlignMiddle().Height(50)
+                                     .Text("No Logo").FontSize(8).FontColor(Colors.Grey.Medium);
+                            });
+                        });
 
-            return stream.ToArray();
+                        header.Item().PaddingVertical(5).LineHorizontal(1);
+                    });
+
+                    // --- Content ---
+                    page.Content().Column(content =>
+                    {
+                        content.Item().Text("Invoice / Receipt")
+                            .FontSize(14).Bold().AlignCenter().FontColor(Colors.Black);
+
+                        content.Item().Text($"Date: {DateTime.Now:dd-MM-yyyy HH:mm}")
+                            .AlignRight().FontSize(9);
+
+                        // Customer Info
+                        content.Item().PaddingVertical(10).Text("Customer Information")
+                            .FontSize(11).Bold().FontColor(Colors.Blue.Medium);
+
+                        content.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn();
+                            });
+
+                            void AddRow(string label, string? value) =>
+                                table.Cell().Text($"{label} {value ?? "N/A"}").FontSize(9);
+
+                            AddRow("Name:", customer.CustomerName);
+                            AddRow("Phone:", customer.PhoneNo);
+                            AddRow("Email:", customer.Email);
+                            AddRow("Payment Mode:", customer.PaymentMode);
+                        });
+
+                        // Sale Details Table
+                        content.Item().PaddingTop(15).Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(3); // Product
+                                columns.RelativeColumn(1); // Qty
+                                columns.RelativeColumn(2); // Price
+                                columns.RelativeColumn(2); // Discount
+                                columns.RelativeColumn(2); // Tax
+                                columns.RelativeColumn(2); // Total
+                            });
+
+                            // Header
+                            table.Header(header =>
+                            {
+                                header.Cell().Element(CellStyleHeader).Text("Product");
+                                header.Cell().Element(CellStyleHeader).Text("Qty");
+                                header.Cell().Element(CellStyleHeader).Text("Price");
+                                header.Cell().Element(CellStyleHeader).Text("Discount");
+                                header.Cell().Element(CellStyleHeader).Text("Tax");
+                                header.Cell().Element(CellStyleHeader).Text("Total");
+
+                                static IContainer CellStyleHeader(IContainer container) =>
+                                    container.Background(Colors.Blue.Medium)
+                                             .Padding(5)
+                                             .AlignCenter()
+                                             .DefaultTextStyle(TextStyle.Default.FontColor(Colors.White).Bold());
+                            });
+
+                            // Rows
+                            foreach (var d in details)
+                            {
+                                table.Cell().Element(CellStyle).Text(d.ProductName);
+                                table.Cell().Element(CellStyle).Text(d.Quantity.ToString());
+                                table.Cell().Element(CellStyle).Text($"{d.Price}");
+                                table.Cell().Element(CellStyle).Text($"{d.TotalDiscount}");
+                                table.Cell().Element(CellStyle).Text($"{d.Tax}");
+                                table.Cell().Element(CellStyle).Text($"{d.Price}");
+                            }
+
+                            // Footer rows aligned to last column
+                            void AddFooterRow(string label, decimal value)
+                            {
+                                table.Cell().ColumnSpan(5).AlignRight().PaddingTop(3).Text(label).Bold();
+                                table.Cell().PaddingTop(3).Text($"{value:F2}").Bold(); // 2 decimals
+                            }
+
+                            AddFooterRow("Grand Total:", grandTotal);
+                            AddFooterRow("Paid Amount:", customer.paidamt);
+                            AddFooterRow("Balance Amount:", customer.baldue);
+
+                            static IContainer CellStyle(IContainer container) =>
+                                container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
+                                         .Padding(4)
+                                         .AlignCenter();
+                        });
+                    });
+
+                    page.Footer().AlignCenter().Text("Thank you for your business!")
+                        .FontColor(Colors.Grey.Medium);
+                });
+            });
+
+            // Generate PDF as byte array
+            return document.GeneratePdf();
         }
-
         #endregion
     }
 }
