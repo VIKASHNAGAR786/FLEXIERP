@@ -16,7 +16,7 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         #region Customer Ledger
         public Task<int> Savecustomerledger(Customerledgermodel customerLedger);
         public Task<IEnumerable<CustomerledgerDto?>> GetCustomerledger(int pageNo = 1, int pageSize = 20);
-        public Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid);
+        public Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid, string StartDate, string EndDate);
         public Task<byte[]> GetCustomerledgerdetailspdf(int customerid);
         #endregion
     }

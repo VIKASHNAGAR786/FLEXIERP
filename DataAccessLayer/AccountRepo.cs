@@ -614,9 +614,9 @@ namespace FLEXIERP.DataAccessLayer
             return historyList;
         }
 
-        public async Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid)
+        public async Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid, string StartDate, string EndDate)
         {
-            List<CustomerledgerdetailDto>? companyInfo = new List<CustomerledgerdetailDto>();
+            List<CustomerledgerdetailDto?> companyInfo = new List<CustomerledgerdetailDto?>();
             try
             {
                 using var connection = sqlConnection.GetConnection();
@@ -627,6 +627,8 @@ namespace FLEXIERP.DataAccessLayer
                 cmd.CommandType = CommandType.StoredProcedure;
 
                 cmd.Parameters.Add(new SqlParameter("@CustomerID", SqlDbType.Int) { Value = customerid });
+                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.Int) { Value = StartDate });
+                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.Int) { Value = EndDate });
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())

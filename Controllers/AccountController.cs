@@ -261,7 +261,7 @@ namespace FLEXIERP.Controllers
         }
 
         [HttpGet("GetCustomerledgerdetails")]
-        public async Task<IActionResult> GetCustomerledgerdetails([FromQuery] int customerid)
+        public async Task<IActionResult> GetCustomerledgerdetails([FromQuery] int customerid, string StartDate, string EndDate)
         {
             try
             {
@@ -269,7 +269,7 @@ namespace FLEXIERP.Controllers
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
 
-                IEnumerable<CustomerledgerdetailDto?> data = await accouuntservice.GetCustomerledgerdetails(customerid);
+                IEnumerable<CustomerledgerdetailDto?> data = await accouuntservice.GetCustomerledgerdetails(customerid, StartDate, EndDate);
                 return Ok(data);
             }
             catch (Exception ex)
