@@ -627,8 +627,8 @@ namespace FLEXIERP.DataAccessLayer
                 cmd.CommandType = CommandType.StoredProcedure;
 
                 cmd.Parameters.Add(new SqlParameter("@CustomerID", SqlDbType.Int) { Value = customerid });
-                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.Int) { Value = StartDate });
-                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.Int) { Value = EndDate });
+                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.VarChar) { Value = StartDate });
+                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.VarChar) { Value = EndDate });
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())

@@ -261,7 +261,7 @@ namespace FLEXIERP.Controllers
         }
 
         [HttpGet("GetCustomerledgerdetails")]
-        public async Task<IActionResult> GetCustomerledgerdetails([FromQuery] int customerid, string StartDate, string EndDate)
+        public async Task<IActionResult> GetCustomerledgerdetails([FromQuery] int customerid, string startDate, string endDate)
         {
             try
             {
@@ -269,7 +269,7 @@ namespace FLEXIERP.Controllers
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
 
-                IEnumerable<CustomerledgerdetailDto?> data = await accouuntservice.GetCustomerledgerdetails(customerid, StartDate, EndDate);
+                IEnumerable<CustomerledgerdetailDto?> data = await accouuntservice.GetCustomerledgerdetails(customerid, startDate, endDate);
                 return Ok(data);
             }
             catch (Exception ex)
@@ -284,7 +284,7 @@ namespace FLEXIERP.Controllers
         }
 
         [HttpGet("GetCustomerledgerdetailspdf")]
-        public async Task<IActionResult> GetCustomerledgerdetailspdf([FromQuery] int customerid)
+        public async Task<IActionResult> GetCustomerledgerdetailspdf([FromQuery] int customerid, string startDate, string endDate)
         {
             try
             {
@@ -292,7 +292,7 @@ namespace FLEXIERP.Controllers
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
 
-                var pdfBytes = await accouuntservice.GetCustomerledgerdetailspdf(customerid);
+                var pdfBytes = await accouuntservice.GetCustomerledgerdetailspdf(customerid, startDate, endDate);
                 return File(pdfBytes, "application/pdf", "GetCustomerledgerdetailspdf.pdf");
             }
             catch (Exception ex)

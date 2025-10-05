@@ -155,9 +155,9 @@ namespace FLEXIERP.BusinessLayer
         }
 
 
-        public async Task<byte[]> GetCustomerledgerdetailspdf(int customerid)
+        public async Task<byte[]> GetCustomerledgerdetailspdf(int customerid, string StartDate, string EndDate)
         {
-            List<CustomerledgerdetailDto?> data = (List<CustomerledgerdetailDto?>)await this.accountRepo.GetCustomerledgerdetails(customerid, null, null);
+            List<CustomerledgerdetailDto?> data = (List<CustomerledgerdetailDto?>)await this.accountRepo.GetCustomerledgerdetails(customerid, StartDate, EndDate);
             var document = Document.Create(container =>
             {
                 container.Page(page =>
