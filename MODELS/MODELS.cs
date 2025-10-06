@@ -232,5 +232,11 @@ namespace FLEXIERP.MODELS
         public List<SaleDetail> SaleDetails { get; set; } = new List<SaleDetail>();
     }
 
-
+    public class ProductCategoryListDto
+    {
+        public int SrNo { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public DateTime CreatedDate { get; set; }
+    }
 }

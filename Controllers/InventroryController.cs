@@ -60,6 +60,23 @@ namespace FLEXIERP.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        [HttpGet]
+        [Route("GetProductCategoryList")]
+        public async Task<ActionResult<IEnumerable<ProductCategoryListDto>>> GetProductCategoryList()
+        {
+            try
+            {
+                var categories = await inventoryService.GetProductCategoryListAsync();
+                return Ok(categories);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         #endregion
 
         #region Save Product

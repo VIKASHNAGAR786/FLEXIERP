@@ -7,6 +7,8 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
     {
         public Task<int> AddCategory(Product_Category product_Category);
         public Task<IEnumerable<ProductCategory_DTO>> GetCategories(bool onlyActive = false);
+        public Task<IEnumerable<ProductCategoryListDto>> GetProductCategoryList(bool onlyActive = false);
+
 
         #region save product
         public Task<string> AddProduct(ProductModel product);

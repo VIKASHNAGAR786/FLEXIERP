@@ -28,7 +28,10 @@ namespace FLEXIERP.BusinessLayer
         {
             return await inventoryRepo.GetCategories();
         }
-
+        public async Task<IEnumerable<ProductCategoryListDto>> GetProductCategoryListAsync(CancellationToken cancellationToken = default)
+        {
+            return await inventoryRepo.GetProductCategoryList(); // repo me bhi async method
+        }
         #region Save Product
         public Task<string> AddProduct(ProductModel product)
         {

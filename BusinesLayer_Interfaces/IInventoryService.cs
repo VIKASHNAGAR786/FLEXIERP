@@ -7,6 +7,7 @@ namespace FLEXIERP.BusinesLayer_Interfaces
     {
         public Task<int> AddCategory(Product_Category product_Category);
         public Task<IEnumerable<ProductCategory_DTO>> GetCategories();
+        Task<IEnumerable<ProductCategoryListDto>> GetProductCategoryListAsync(CancellationToken cancellationToken = default);
 
         #region Save prodcut
         public Task<string> AddProduct(ProductModel product);

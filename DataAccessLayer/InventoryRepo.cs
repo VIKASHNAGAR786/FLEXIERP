@@ -111,6 +111,55 @@ namespace FLEXIERP.DataAccessLayer
 
             return categories;
         }
+
+        public async Task<IEnumerable<ProductCategoryListDto>> GetProductCategoryList(bool onlyActive = false)
+        {
+            var categories = new List<ProductCategoryListDto>();
+            var connection = sqlconnection.GetConnection();
+
+            try
+            {
+                await connection.OpenAsync();
+
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "sp_GetProductCategoryList";
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    //cmd.Parameters.Add(new SqlParameter("@OnlyActive", SqlDbType.Bit)
+                    //{
+                    //    Value = onlyActive
+                    //});
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var category = new ProductCategoryListDto
+                            {
+                                SrNo = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                                CategoryName = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                                Description = !reader.IsDBNull(2) ? reader.GetString(2) : null,
+                                CreatedDate = !reader.IsDBNull(3) ? reader.GetDateTime(3) : DateTime.MinValue
+                            };
+
+                            categories.Add(category);
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve categories. Please try again later.", ex);
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+
+            return categories;
+        }
+
         #endregion
 
         #region add product
