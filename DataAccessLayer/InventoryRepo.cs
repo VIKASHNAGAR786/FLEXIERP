@@ -2,7 +2,6 @@
 using FLEXIERP.DATABASE;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
-using FLEXIERP.MODELS.AGRIMANDI.Model;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Data.Common;

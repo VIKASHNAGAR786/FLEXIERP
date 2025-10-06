@@ -5,7 +5,6 @@ using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
-using FLEXIERP.MODELS.AGRIMANDI.Model;
 using QuestPDF;
 using QuestPDF.Fluent;
 using SelectPdf;

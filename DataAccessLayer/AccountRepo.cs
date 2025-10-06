@@ -3,7 +3,6 @@ using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using DocumentFormat.OpenXml.Spreadsheet;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DATABASE;
-using FLEXIERP.MODELS.AGRIMANDI.Model;
 using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
@@ -13,6 +12,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using FLEXIERP.MODELS;
 
 namespace FLEXIERP.DataAccessLayer
 {

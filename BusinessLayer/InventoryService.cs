@@ -5,7 +5,6 @@ using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
-using FLEXIERP.MODELS.AGRIMANDI.Model;
 using SelectPdf;
 using System.Drawing;
 

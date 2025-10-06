@@ -2,7 +2,6 @@
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS;
-using FLEXIERP.MODELS.AGRIMANDI.Model;
 using Microsoft.AspNetCore.Mvc;
 using QuestPDF.Drawing;
 using QuestPDF.Fluent;

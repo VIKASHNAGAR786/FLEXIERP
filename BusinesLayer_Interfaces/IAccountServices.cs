@@ -1,4 +1,4 @@
-﻿using FLEXIERP.MODELS.AGRIMANDI.Model;
+﻿using FLEXIERP.MODELS;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FLEXIERP.BusinesLayer_Interfaces

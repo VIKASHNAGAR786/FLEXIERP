@@ -1,6 +1,5 @@
 ﻿using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.BusinessLayer;
-using FLEXIERP.MODELS.AGRIMANDI.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

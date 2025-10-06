@@ -1,4 +1,5 @@
-﻿using FLEXIERP.MODELS.AGRIMANDI.Model;
+﻿
+using FLEXIERP.MODELS;
 
 namespace FLEXIERP.DataAccessLayer_Interfaces
 {
