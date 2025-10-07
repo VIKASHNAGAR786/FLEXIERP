@@ -1,17 +1,20 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.ExtendedProperties;
+using DocumentFormat.OpenXml.InkML;
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
+using Microsoft.AspNetCore.Http.HttpResults;
 using QuestPDF;
+using QuestPDF.Drawing;
 using QuestPDF.Fluent;
-using SelectPdf;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
-using QuestPDF.Drawing;
 using QuestPDF.Previewer;
+using Razorpay.Api;
+using SelectPdf;
 
 
 namespace FLEXIERP.BusinessLayer
@@ -20,10 +23,12 @@ namespace FLEXIERP.BusinessLayer
     {
         private readonly ISaleRepo _saleRepo;
         private readonly IAccountRepo accountRepo;
-        public SaleService(ISaleRepo saleRepo, IAccountRepo accountRepo)
+        private readonly ICommonMasterRepo commonmaster;
+        public SaleService(ISaleRepo saleRepo, IAccountRepo accountRepo, ICommonMasterRepo _commonmaster)
         {
             _saleRepo = saleRepo;
             this.accountRepo = accountRepo;
+            this.commonmaster = _commonmaster;
         }
 
         #region Product By Barcode
@@ -36,6 +41,37 @@ namespace FLEXIERP.BusinessLayer
         #region make Sale
         public async Task<int> InsertSaleAsync(Sale sale)
         {
+            int payid = 0;
+            if (sale.Customer is not null) {
+                if (sale.Customer.PaymentMode == 1)
+                {
+                    SaveCashPaymentDto cash = new SaveCashPaymentDto
+                    {
+
+                        Amount = (decimal)sale.Customer.PaidAmt!,
+                        PaymentDate = DateTime.UtcNow,
+                        CreatedBy = sale.CreatedBy,
+                       
+                    };
+                    payid = await this.commonmaster.SaveCashPaymentAsync(cash);
+                }
+                else if(sale.Customer.PaymentMode == 2)
+                {
+                    SaveChequePaymentDto cheque = new SaveChequePaymentDto
+                    {
+                        ChequeNumber  = sale.Customer.chequepayment.ChequeNumber,
+                        BankName = sale.Customer.chequepayment.BankName,
+                        BranchName = sale.Customer.chequepayment.BranchName,
+                        ChequeDate = sale.Customer.chequepayment.ChequeDate,
+                        Amount = sale.Customer.chequepayment.Amount,
+                        IFSC_Code = sale.Customer.chequepayment.IFSC_Code,
+                        CreatedBy = sale.CreatedBy,
+
+                    };
+                    payid = await this.commonmaster.SaveChequePaymentAsync(cheque);
+                }
+                sale.Customer.payid = payid;
+            }
             return await _saleRepo.InsertSaleAsync(sale);
         }
         #endregion

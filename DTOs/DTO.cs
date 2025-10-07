@@ -166,4 +166,12 @@
         public DateTime? CreatedDate { get; set; }
     }
 
+    public class DashboardMetricsDto
+    {
+        public decimal TotalCashReceived { get; set; }
+        public decimal TotalChequeReceived { get; set; }
+        public decimal? CashGrowthPercent { get; set; }
+        public decimal? ChequeGrowthPercent { get; set; }
+    }
+
 }

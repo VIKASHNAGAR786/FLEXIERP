@@ -212,7 +212,9 @@ namespace FLEXIERP.MODELS
         public decimal? BalanceDue { get; set; }      // @balance_due
         public decimal? TotalAmt { get; set; }        // @total_amt
         public string? TransactionType { get; set; } = "SALE"; // @transaction_type
-        public int payid { get; set; } = 1;        // @payid
+        public int? payid { get; set; }    // @payid
+
+        public SaveChequePaymentDto? chequepayment { get; set; }
     }
     public class SaleDetail
     {
@@ -239,4 +241,21 @@ namespace FLEXIERP.MODELS
         public string? Description { get; set; }
         public DateTime CreatedDate { get; set; }
     }
+    public class SaveChequePaymentDto
+    {
+        public string? ChequeNumber { get; set; }
+        public string? BankName { get; set; }
+        public string? BranchName { get; set; }
+        public DateTime? ChequeDate { get; set; }
+        public decimal Amount { get; set; }
+        public string? IFSC_Code { get; set; }
+        public int? CreatedBy { get; set; }
+    }
+    public class SaveCashPaymentDto
+    {
+        public decimal Amount { get; set; }
+        public DateTime? PaymentDate { get; set; }
+        public int? CreatedBy { get; set; }
+    }
+
 }
