@@ -172,6 +172,19 @@
         public decimal TotalChequeReceived { get; set; }
         public decimal? CashGrowthPercent { get; set; }
         public decimal? ChequeGrowthPercent { get; set; }
+        public decimal? TotalBalanceDue { get; set; }
+        public List<TransactionDto?>? recenttransaction { get; set; }
+    }
+    public class TransactionDto
+    {
+        public string Date { get; set; } = "";
+        public string Time { get; set; } = "";
+        public string CustomerName { get; set; } = "";
+        public decimal ReceivedAmount { get; set; }
+        public decimal BalanceDue { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string PaymentType { get; set; } = "";
+        public string TransactionType { get; set; } = "";
     }
 
 }

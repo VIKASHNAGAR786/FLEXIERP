@@ -153,19 +153,45 @@ namespace FLEXIERP.DataAccessLayer
 
                 cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.VarChar) { Value = startDate });
                 cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.VarChar) { Value = endDate });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = 50 }); // optional page size
 
                 using var reader = await cmd.ExecuteReaderAsync();
+
+                // First result set: metrics
                 if (await reader.ReadAsync())
                 {
                     metrics = new DashboardMetricsDto
                     {
                         TotalCashReceived = !reader.IsDBNull(0) ? reader.GetDecimal(0) : 0,
                         TotalChequeReceived = !reader.IsDBNull(1) ? reader.GetDecimal(1) : 0,
-                        CashGrowthPercent = !reader.IsDBNull(2) ? reader.GetDecimal(2) : null,
-                        ChequeGrowthPercent = !reader.IsDBNull(3) ? reader.GetDecimal(3) : null
+                        CashGrowthPercent = !reader.IsDBNull(2) ? reader.GetDecimal(2) : 0,
+                        ChequeGrowthPercent = !reader.IsDBNull(3) ? reader.GetDecimal(3) : 0,
+                        TotalBalanceDue = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0,
                     };
                 }
 
+                // Move to second result set: recent transactions
+
+                List<TransactionDto?> transactionDtos = new List<TransactionDto?>();
+                if (await reader.NextResultAsync() && metrics != null)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var data = new TransactionDto
+                        {
+                            Date = !reader.IsDBNull(0) ? reader.GetString(0) : "",
+                            Time = !reader.IsDBNull(1) ? reader.GetString(1) : "",
+                            CustomerName = !reader.IsDBNull(2) ? reader.GetString(2) : "",
+                            ReceivedAmount = !reader.IsDBNull(3) ? reader.GetDecimal(3) : 0,
+                            BalanceDue = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0,
+                            TotalAmount = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0,
+                            PaymentType = !reader.IsDBNull(6) ? reader.GetString(6) : "",
+                            TransactionType = !reader.IsDBNull(7) ? reader.GetString(7) : ""
+                        };
+                        transactionDtos.Add(data);
+                    }
+                }
+                metrics.recenttransaction = transactionDtos;
                 return metrics;
             }
             catch (SqlException ex)
