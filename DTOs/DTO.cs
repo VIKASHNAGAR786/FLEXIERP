@@ -120,10 +120,19 @@
         public decimal Tax { get; set; }
     }
 
+    public class extrachargesDTO
+    {
+        public string chargename { get; set; } = string.Empty;
+        public decimal chargeamount { get; set; }
+        public string? createby { get; set; }
+        public string? createdate { get; set; }
+    }
+
     public class ReceiptDTO
     {
         public ReceiptCustomerDTO? CustomerInfo { get; set; }
         public List<ReceiptDetailDTO> SaleDetails { get; set; } = new List<ReceiptDetailDTO>();
+        public List<extrachargesDTO> extracharges { get; set; } = new List<extrachargesDTO>();
     }
 
     public record ProductCategory_DTO

@@ -298,6 +298,7 @@ namespace FLEXIERP.BusinessLayer
 
             var customer = receipt.CustomerInfo;
             var details = receipt.SaleDetails;
+            var charges = receipt.extracharges;
 
             decimal grandTotal = details.Sum(d => d.Price);
 

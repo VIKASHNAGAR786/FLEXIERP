@@ -458,6 +458,21 @@ namespace FLEXIERP.DataAccessLayer
                         });
                     }
                 }
+
+                // Move to third result set
+                if (await reader.NextResultAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        receipt.extracharges.Add(new extrachargesDTO
+                        {
+                            chargename = !reader.IsDBNull(0) ? reader.GetString(0) : string.Empty,
+                            chargeamount = !reader.IsDBNull(1) ? reader.GetDecimal(1) : 0,
+                            createby = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                            createdate = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty
+                        });
+                    }
+                }
             }
             catch (SqlException ex)
             {
