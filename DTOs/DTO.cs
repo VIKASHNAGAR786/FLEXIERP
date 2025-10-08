@@ -32,6 +32,7 @@
         public DateTime OrderDate { get; set; }
         public string FullName { get; set; } = string.Empty;
         public int TotalRows { get; set; }
+        public decimal extracharges { get; set; }
     }
 
     public class OldCustomerDTO

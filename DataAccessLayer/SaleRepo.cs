@@ -309,7 +309,9 @@ namespace FLEXIERP.DataAccessLayer
                         TotalDiscount = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0,
                         OrderDate = !reader.IsDBNull(6) ? reader.GetDateTime(6) : DateTime.MinValue,
                         FullName = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
-                        TotalRows = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0
+                        TotalRows = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0,
+                        extracharges = !reader.IsDBNull(9) ? reader.GetDecimal(9) : 0
+
                     });
                 }
             }

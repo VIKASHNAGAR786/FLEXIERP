@@ -128,7 +128,7 @@ namespace FLEXIERP.BusinessLayer
                 <th>CustomerName</th>
                 <th>TotalItems</th>
                 <th>TotalAmount</th>
-                <th>TotalDiscount</th>
+                <th>TotalExtraCharges</th>
                 <th>OrderDate</th>
                 <th>FullName</th>
                 <th>TotalRows</th>
@@ -146,7 +146,7 @@ namespace FLEXIERP.BusinessLayer
                 <td>{p.CustomerName}</td>
                 <td>{p.TotalItems}</td>
                 <td>{p.TotalAmount}</td>
-                <td>{p.TotalDiscount}</td>
+                <td>{p.extracharges}</td>
                 <td>{p.OrderDate}</td>
                 <td>{p.FullName}</td>
                 <td>{p.TotalRows}</td>
@@ -220,7 +220,7 @@ namespace FLEXIERP.BusinessLayer
         "CustomerName",
         "TotalItems",
         "TotalAmount",
-        "TotalDiscount",
+        "TotalExtraCharges",
         "OrderDate",
         "FullName",
         "TotalRows",
@@ -247,7 +247,7 @@ namespace FLEXIERP.BusinessLayer
                 worksheet.Cell(currentRow, 2).Value = p.CustomerName;
                 worksheet.Cell(currentRow, 3).Value = p.TotalItems;
                 worksheet.Cell(currentRow, 4).Value = p.TotalAmount;
-                worksheet.Cell(currentRow, 5).Value = p.TotalDiscount;
+                worksheet.Cell(currentRow, 5).Value = p.extracharges;
                 worksheet.Cell(currentRow, 6).Value = p.OrderDate;
                 worksheet.Cell(currentRow, 7).Value = p.FullName;
                 worksheet.Cell(currentRow, 8).Value = p.TotalRows;
