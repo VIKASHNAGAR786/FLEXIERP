@@ -230,6 +230,33 @@ namespace FLEXIERP.DataAccessLayer
                 tvpParam.SqlDbType = SqlDbType.Structured;
                 tvpParam.TypeName = "SaleDetailType";
 
+                var extracharges = new DataTable();
+                extracharges.Columns.Add("name", typeof(string));
+                extracharges.Columns.Add("charge_amt", typeof(decimal));
+                extracharges.Columns.Add("create_by", typeof(int));
+                extracharges.Columns.Add("saleid", typeof(int));
+                extracharges.Columns.Add("customerid", typeof(int));
+
+                if (sale.extracharges != null && sale.extracharges.Any())
+                {
+                    foreach (var extra in sale.extracharges)
+                    {
+                        extracharges.Rows.Add(
+                            extra.name ?? (object)DBNull.Value,
+                            extra.amount ?? (object)DBNull.Value,
+                            sale.CreatedBy ?? (object)DBNull.Value,
+                            (object)DBNull.Value, 
+                            (object)DBNull.Value  
+                        );
+                    }
+                }
+
+                // Add parameter to command
+                var extrachargesParams = cmd.Parameters.AddWithValue("@ExtraCharges", extracharges);
+                extrachargesParams.SqlDbType = SqlDbType.Structured;
+                extrachargesParams.TypeName = "ExtraChargesType";
+
+
                 // Execute
                 await cmd.ExecuteNonQueryAsync();
 

@@ -221,6 +221,11 @@ namespace FLEXIERP.MODELS
         public int ProductID { get; set; }
         public decimal productquantity { get; set; }
     }
+    public record Extracharges
+    {
+        public string? name { get; set; }
+        public decimal? amount { get; set; }
+    }
 
     public class Sale
     {
@@ -232,6 +237,7 @@ namespace FLEXIERP.MODELS
         public DateTime? OrderDate { get; set; }
         public int? CreatedBy { get; set; }
         public List<SaleDetail> SaleDetails { get; set; } = new List<SaleDetail>();
+        public List<Extracharges>? extracharges { get; set; } = new List<Extracharges>();
     }
 
     public class ProductCategoryListDto
@@ -241,6 +247,7 @@ namespace FLEXIERP.MODELS
         public string? Description { get; set; }
         public DateTime CreatedDate { get; set; }
     }
+
     public class SaveChequePaymentDto
     {
         public string? ChequeNumber { get; set; }
