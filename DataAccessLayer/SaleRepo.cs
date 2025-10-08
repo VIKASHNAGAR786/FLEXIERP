@@ -454,7 +454,8 @@ namespace FLEXIERP.DataAccessLayer
                             Quantity = !reader.IsDBNull(1) ? reader.GetDecimal(1) : 0,
                             Price = !reader.IsDBNull(2) ? reader.GetDecimal(2) : 0,
                             TotalDiscount = !reader.IsDBNull(3) ? reader.GetDecimal(3) : 0,
-                            Tax = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0
+                            Tax = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0,
+                            TotalAmount = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0
                         });
                     }
                 }

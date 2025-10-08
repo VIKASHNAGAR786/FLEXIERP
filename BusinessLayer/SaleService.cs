@@ -289,7 +289,7 @@ namespace FLEXIERP.BusinessLayer
         #region Sale Invoice
         public async Task<byte[]> GetReceiptPdf(int saleId, int userId)
         {
-            // Fetch data
+            // --- Fetch data ---
             var receipt = await _saleRepo.GetReceiptDetail(saleId);
             var company = await accountRepo.GetCompanyInfoByUserAsync(userId);
 
@@ -298,46 +298,49 @@ namespace FLEXIERP.BusinessLayer
 
             var customer = receipt.CustomerInfo;
             var details = receipt.SaleDetails;
-            var charges = receipt.extracharges;
+            var extracharges = receipt.extracharges;
 
-            decimal grandTotal = details.Sum(d => d.Price);
+            decimal subTotal = details.Sum(d => d.TotalAmount);
+            decimal extraTotal = extracharges?.Sum(e => e.chargeamount) ?? 0;
+            decimal grandTotal = subTotal + extraTotal;
 
-            // Create the PDF document
-            // Create the PDF document
+            // --- Create PDF document ---
             var document = Document.Create(container =>
             {
                 container.Page(page =>
                 {
-                    page.Margin(30);
                     page.Size(PageSizes.A4);
+                    page.Margin(35);
                     page.DefaultTextStyle(TextStyle.Default.FontSize(10));
 
                     // --- Background watermark ---
-                    page.Background().AlignCenter().AlignMiddle().Element(container =>
+                    page.Background().AlignCenter().AlignMiddle().Element(c =>
                     {
-                        container.Rotate(-45) // rotate diagonally
-                                 .Text(company.CompanyName)
-                                 .FontSize(80)
-                                 .Bold()
-                                 .FontColor(Colors.Grey.Lighten3)
-                                 .AlignCenter(); // center the text inside the rotated container
+                        c.Rotate(-45)
+                         .Text(company.CompanyName)
+                         .FontSize(80)
+                         .Bold()
+                         .FontColor(Colors.Grey.Lighten3)
+                         .AlignCenter();
                     });
 
-
-
-                    // --- Header ---
+                    // --- Header Section ---
                     page.Header().Column(header =>
                     {
                         header.Item().Row(row =>
                         {
+                            // Company Info
                             row.RelativeColumn().Column(col =>
                             {
-                                col.Item().Text(company.CompanyName).FontSize(16).Bold().FontColor(Colors.Blue.Medium);
-                                col.Item().Text($"{company.Address}").FontSize(10).FontColor(Colors.Grey.Darken2);
+                                col.Item().Text(company.CompanyName)
+                                    .FontSize(16).Bold().FontColor(Colors.Blue.Medium);
+                                col.Item().Text(company.Address ?? "—")
+                                    .FontSize(9).FontColor(Colors.Grey.Darken2);
                                 col.Item().Text($"Phone: {company.ContactNo} | Email: {company.Email}")
                                     .FontSize(9).FontColor(Colors.Grey.Darken1);
                             });
 
+                            // Company Logo
                             row.ConstantColumn(80).AlignRight().AlignMiddle().Element(e =>
                             {
                                 var logoPath = string.IsNullOrWhiteSpace(company.CompanyLogo)
@@ -356,14 +359,16 @@ namespace FLEXIERP.BusinessLayer
                         header.Item().PaddingVertical(5).LineHorizontal(1);
                     });
 
-                    // --- Content ---
+                    // --- Content Section ---
                     page.Content().Column(content =>
                     {
-                        content.Item().Text("Invoice / Receipt")
-                            .FontSize(14).Bold().AlignCenter().FontColor(Colors.Black);
+                        content.Spacing(10);
 
-                        content.Item().Text($"Date: {DateTime.Now:dd-MM-yyyy HH:mm}")
-                            .AlignRight().FontSize(9);
+                        // Invoice title + Date
+                        content.Item().Text("INVOICE / RECEIPT")
+                            .FontSize(14).Bold().AlignCenter().FontColor(Colors.Black);
+                        content.Item().AlignRight().Text($"Date: {DateTime.Now:dd-MM-yyyy HH:mm}")
+                            .FontSize(9).FontColor(Colors.Grey.Darken1);
 
                         // Customer Info
                         content.Item().PaddingVertical(10).Text("Customer Information")
@@ -371,13 +376,22 @@ namespace FLEXIERP.BusinessLayer
 
                         content.Item().Table(table =>
                         {
-                            table.ColumnsDefinition(columns =>
+                            table.ColumnsDefinition(c =>
                             {
-                                columns.RelativeColumn();
+                                c.RelativeColumn(2);
+                                c.RelativeColumn(4);
                             });
 
-                            void AddRow(string label, string? value) =>
-                                table.Cell().Text($"{label} {value ?? "N/A"}").FontSize(9);
+                            void AddRow(string label, string? value)
+                            {
+                                table.Cell().Element(CellLabel).Text(label).Bold();
+                                table.Cell().Element(CellValue).Text(value ?? "N/A");
+                            }
+
+                            static IContainer CellLabel(IContainer container) =>
+                                container.PaddingVertical(2).PaddingLeft(5);
+                            static IContainer CellValue(IContainer container) =>
+                                container.PaddingVertical(2);
 
                             AddRow("Name:", customer.CustomerName);
                             AddRow("Phone:", customer.PhoneNo);
@@ -385,73 +399,117 @@ namespace FLEXIERP.BusinessLayer
                             AddRow("Payment Mode:", customer.PaymentMode);
                         });
 
-                        // Sale Details Table
-                        content.Item().PaddingTop(15).Table(table =>
+                        // --- Sale Details Table ---
+                        content.Item().PaddingTop(10).Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
                             {
                                 columns.RelativeColumn(3); // Product
                                 columns.RelativeColumn(1); // Qty
-                                columns.RelativeColumn(2); // Price
-                                columns.RelativeColumn(2); // Discount
-                                columns.RelativeColumn(2); // Tax
-                                columns.RelativeColumn(2); // Total
+                                columns.RelativeColumn(1.5f); // Price
+                                columns.RelativeColumn(1.5f); // Discount
+                                columns.RelativeColumn(1.5f); // Tax
+                                columns.RelativeColumn(1.5f); // Total
                             });
 
                             // Header
                             table.Header(header =>
                             {
-                                header.Cell().Element(CellStyleHeader).Text("Product");
-                                header.Cell().Element(CellStyleHeader).Text("Qty");
-                                header.Cell().Element(CellStyleHeader).Text("Price");
-                                header.Cell().Element(CellStyleHeader).Text("Discount");
-                                header.Cell().Element(CellStyleHeader).Text("Tax");
-                                header.Cell().Element(CellStyleHeader).Text("Total");
+                                string HeaderStyle = Colors.Blue.Medium;
 
-                                static IContainer CellStyleHeader(IContainer container) =>
+                                header.Cell().Element(CellHeader).Text("Product");
+                                header.Cell().Element(CellHeader).Text("Qty");
+                                header.Cell().Element(CellHeader).Text("Price");
+                                header.Cell().Element(CellHeader).Text("Discount");
+                                header.Cell().Element(CellHeader).Text("Tax");
+                                header.Cell().Element(CellHeader).Text("Total");
+
+                                static IContainer CellHeader(IContainer container) =>
                                     container.Background(Colors.Blue.Medium)
                                              .Padding(5)
                                              .AlignCenter()
                                              .DefaultTextStyle(TextStyle.Default.FontColor(Colors.White).Bold());
                             });
 
-                            // Rows
+                            // Rows (with alternate shading)
+                            bool alternate = false;
                             foreach (var d in details)
                             {
-                                table.Cell().Element(CellStyle).Text(d.ProductName);
-                                table.Cell().Element(CellStyle).Text(d.Quantity.ToString());
-                                table.Cell().Element(CellStyle).Text($"{d.Price}");
-                                table.Cell().Element(CellStyle).Text($"{d.TotalDiscount}");
-                                table.Cell().Element(CellStyle).Text($"{d.Tax}");
-                                table.Cell().Element(CellStyle).Text($"{d.Price}");
+                                var bg = alternate ? Colors.Grey.Lighten4 : Colors.White;
+                                alternate = !alternate;
+
+                                table.Cell().Element(c => RowCell(c, bg)).Text(d.ProductName);
+                                table.Cell().Element(c => RowCell(c, bg)).AlignCenter().Text(d.Quantity.ToString());
+                                table.Cell().Element(c => RowCell(c, bg)).AlignRight().Text($"₹{d.Price:N2}");
+                                table.Cell().Element(c => RowCell(c, bg)).AlignRight().Text($"₹{d.TotalDiscount:N2}");
+                                table.Cell().Element(c => RowCell(c, bg)).AlignRight().Text($"₹{d.Tax:N2}");
+                                table.Cell().Element(c => RowCell(c, bg)).AlignRight().Text($"₹{d.TotalAmount:N2}");
                             }
 
-                            // Footer rows aligned to last column
-                            void AddFooterRow(string label, decimal value)
+                            static IContainer RowCell(IContainer container, string bg) =>
+                                container.Background(bg)
+                                         .Padding(5)
+                                         .BorderBottom(1)
+                                         .BorderColor(Colors.Grey.Lighten2)
+                                         .DefaultTextStyle(TextStyle.Default.FontSize(10));
+
+                            // --- Extra Charges ---
+                            if (extracharges != null && extracharges.Any())
                             {
-                                table.Cell().ColumnSpan(5).AlignRight().PaddingTop(3).Text(label).Bold();
-                                table.Cell().PaddingTop(3).Text($"{value:F2}").Bold(); // 2 decimals
+                                table.Cell().ColumnSpan(6).PaddingTop(8);
+                                table.Cell().ColumnSpan(6)
+                                    .Element(c => c.Background(Colors.Grey.Lighten3).Padding(5))
+                                    .Text("Additional Charges")
+                                    .FontColor(Colors.Blue.Darken2)
+                                    .Bold();
+
+                                foreach (var e in extracharges)
+                                {
+                                    table.Cell().ColumnSpan(4).Element(c => RowCell(c, Colors.White))
+                                        .Text($"• {e.chargename}");
+                                    table.Cell().ColumnSpan(2).Element(c => RowCell(c, Colors.White))
+                                        .AlignRight().Text($"₹{e.chargeamount:N2}");
+                                }
                             }
 
-                            AddFooterRow("Grand Total:", grandTotal);
-                            AddFooterRow("Paid Amount:", customer.paidamt);
-                            AddFooterRow("Balance Amount:", customer.baldue);
+                            // --- Subtotal, Extra, and Grand Total ---
+                            void AddSummaryRow(string label, decimal value, bool highlight = false)
+                            {
+                                table.Cell().ColumnSpan(4);
+                                table.Cell().ColumnSpan(2)
+                                    .Element(c => c.Background(highlight ? Colors.Grey.Lighten3 : Colors.White)
+                                                 .Padding(5)
+                                                 .AlignRight())
+                                    .Text($"{label} ₹{value:N2}")
+                                    .Bold();
+                            }
 
-                            static IContainer CellStyle(IContainer container) =>
-                                container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                         .Padding(4)
-                                         .AlignCenter();
+                            AddSummaryRow("Subtotal:", subTotal);
+                            if (extraTotal > 0)
+                                AddSummaryRow("Extra Charges:", extraTotal);
+                            AddSummaryRow("Grand Total:", grandTotal, true);
+
+                            // --- Paid & Balance Info ---
+                            table.Cell().ColumnSpan(4);
+                            table.Cell().ColumnSpan(2)
+                                .Element(c => c.PaddingTop(8).AlignRight())
+                                .Text($"Paid Amount: ₹{customer.paidamt:N2}\nBalance Due: ₹{customer.baldue:N2}")
+                                .FontSize(10)
+                                .Bold();
                         });
                     });
 
-                    page.Footer().AlignCenter().Text("Thank you for your business!")
-                        .FontColor(Colors.Grey.Medium);
+                    // --- Footer Section ---
+                    page.Footer().AlignCenter()
+                        .PaddingTop(10)
+                        .Text("Thank you for your business!")
+                        .FontColor(Colors.Grey.Darken1);
                 });
             });
 
-            // Generate PDF as byte array
             return document.GeneratePdf();
         }
+
         #endregion
     }
 }

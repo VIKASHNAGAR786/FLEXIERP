@@ -118,6 +118,7 @@
         public decimal Price { get; set; }
         public decimal TotalDiscount { get; set; }
         public decimal Tax { get; set; }
+        public decimal TotalAmount { get; set; }
     }
 
     public class extrachargesDTO
