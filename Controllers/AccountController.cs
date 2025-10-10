@@ -1,9 +1,15 @@
-﻿using FLEXIERP.BusinesLayer_Interfaces;
+﻿using crypto;
+using DocumentFormat.OpenXml.Wordprocessing;
+using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.BusinessLayer;
+using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS;
 using FLEXIERP.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Razorpay.Api.Errors;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace FLEXIERP.Controllers
 {
@@ -12,9 +18,11 @@ namespace FLEXIERP.Controllers
     public class AccountController : ControllerBase
     {
         private readonly IAccountServices accouuntservice;
-        public AccountController(IAccountServices _accouuntservice)
+        private readonly ICommonMasterRepo commonMasterRepo;
+        public AccountController(IAccountServices _accouuntservice, ICommonMasterRepo _common)
         {
             accouuntservice = _accouuntservice;
+            commonMasterRepo = _common;
         }
 
         #region Accounts Operations
@@ -26,26 +34,36 @@ namespace FLEXIERP.Controllers
             try
             {
                 if (string.IsNullOrEmpty(user.Email))
-                {
                     return BadRequest(new { message = "Email address needs to be entered" });
-                }
-                else if (string.IsNullOrEmpty(user.Password))
-                {
+
+                if (string.IsNullOrEmpty(user.Password))
                     return BadRequest(new { message = "Password needs to be entered" });
-                }
 
                 User1? loggedInUser = await accouuntservice.Login(user.Email, user.UserName, user.Password);
 
                 if (loggedInUser != null)
-                {
                     return Ok(loggedInUser);
-                }
 
                 return BadRequest(new { message = "Invalid login credentials" });
             }
             catch (Exception ex)
             {
-                // log the error here (e.g., using ILogger or any logging framework)
+                // Only log if the exception is NOT from AccountService
+                if (ex.TargetSite?.DeclaringType?.Namespace != "FLEXIERP.DataAccessLayer")
+                {
+                    await commonMasterRepo.SaveUserErrorLogAsync(new UserErrorLogDto
+                    {
+                        Module = "Account",
+                        ActionType = "Login",
+                        ErrorMessage = ex.Message,
+                        ErrorCode = ex.HResult.ToString(),
+                        StackTrace = ex.StackTrace,
+                        ApiName = "Login",
+                        Severity = "High",
+                        AdditionalInfo = $"{ex.InnerException?.Message ?? string.Empty}, An unexpected error occurred in login"
+                    });
+                }
+
                 return StatusCode(500, new { message = "An unexpected error occurred.", details = ex.Message });
             }
         }

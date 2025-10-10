@@ -265,4 +265,17 @@ namespace FLEXIERP.MODELS
         public int? CreatedBy { get; set; }
     }
 
+    public record UserErrorLogDto
+    {
+        public string? Module { get; set; }
+        public string? ActionType { get; set; }
+        public string? ErrorMessage { get; set; } = string.Empty;
+        public string? ErrorCode { get; set; }
+        public string? StackTrace { get; set; }
+        public string? ApiName { get; set; }
+        public string? Severity { get; set; } = "ERROR";
+        public string? AdditionalInfo { get; set; }
+    }
+
+
 }

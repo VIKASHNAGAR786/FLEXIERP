@@ -1,9 +1,11 @@
-﻿using FLEXIERP.DataAccessLayer_Interfaces;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DATABASE;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using System.Security.Claims;
 
 namespace FLEXIERP.DataAccessLayer
 {
@@ -12,12 +14,14 @@ namespace FLEXIERP.DataAccessLayer
         private readonly IConfiguration _configuration;
         private readonly ILogger<AccountRepo> _logger;
         private readonly IDataBaseOperation sqlConnection;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public CommonMasterRepo(IConfiguration configuration, ILogger<AccountRepo> logger, IDataBaseOperation _sqlConnection)
+        public CommonMasterRepo(IConfiguration configuration, ILogger<AccountRepo> logger, IDataBaseOperation _sqlConnection, IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;
             this._logger = logger;
             this.sqlConnection = _sqlConnection;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         #region payment methods
@@ -203,6 +207,98 @@ namespace FLEXIERP.DataAccessLayer
                 await sqlConnection.GetConnection().CloseAsync();
             }
         }
+        #endregion
+
+        #region error log
+        public async Task<int> SaveUserErrorLogAsync(UserErrorLogDto errorLog)
+        {
+            try
+            {
+                var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                int? userId = null;
+
+                if (int.TryParse(userIdClaim, out int parsedId))
+                {
+                    userId = parsedId;
+                }
+
+                using (var connection = sqlConnection.GetConnection())
+                {
+                    await connection.OpenAsync();
+
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = "InsertUserErrorLog";
+                        cmd.CommandType = CommandType.StoredProcedure;
+
+                        // Parameters
+                        cmd.Parameters.Add(new SqlParameter("@UserId", SqlDbType.Int)
+                        {
+                            Value = userId
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@Module", SqlDbType.VarChar, 100)
+                        {
+                            Value = string.IsNullOrEmpty(errorLog.Module) ? DBNull.Value : errorLog.Module
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@ActionType", SqlDbType.VarChar, 100)
+                        {
+                            Value = string.IsNullOrEmpty(errorLog.ActionType) ? DBNull.Value : errorLog.ActionType
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@ErrorMessage", SqlDbType.NVarChar)
+                        {
+                            Value = errorLog.ErrorMessage ?? (object)DBNull.Value
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@ErrorCode", SqlDbType.VarChar, 50)
+                        {
+                            Value = string.IsNullOrEmpty(errorLog.ErrorCode) ? DBNull.Value : errorLog.ErrorCode
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@StackTrace", SqlDbType.NVarChar)
+                        {
+                            Value = string.IsNullOrEmpty(errorLog.StackTrace) ? DBNull.Value : errorLog.StackTrace
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@ApiName", SqlDbType.VarChar, 200)
+                        {
+                            Value = string.IsNullOrEmpty(errorLog.ApiName) ? DBNull.Value : errorLog.ApiName
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@Severity", SqlDbType.VarChar, 20)
+                        {
+                            Value = string.IsNullOrEmpty(errorLog.Severity) ? "ERROR" : errorLog.Severity
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@AdditionalInfo", SqlDbType.NVarChar)
+                        {
+                            Value = string.IsNullOrEmpty(errorLog.AdditionalInfo) ? DBNull.Value : errorLog.AdditionalInfo
+                        });
+
+                        cmd.Parameters.Add(new SqlParameter("@CreatedAt", SqlDbType.DateTime)
+                        {
+                            Value = DateTime.Now
+                        });
+
+
+                        // Execute SP and return affected rows (should be 1 if success)
+                        int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                        return rowsAffected;
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Error while saving user error log.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+        }
+
         #endregion
     }
 }

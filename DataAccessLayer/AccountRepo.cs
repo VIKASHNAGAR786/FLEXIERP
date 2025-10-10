@@ -21,12 +21,14 @@ namespace FLEXIERP.DataAccessLayer
         private readonly IConfiguration _configuration;
         private readonly ILogger<AccountRepo> _logger;
         private readonly IDataBaseOperation sqlConnection;
+        private readonly ICommonMasterRepo commonMasterRepo;
 
-        public AccountRepo(IConfiguration configuration, ILogger<AccountRepo> logger, IDataBaseOperation _sqlConnection)
+        public AccountRepo(IConfiguration configuration, ILogger<AccountRepo> logger, IDataBaseOperation _sqlConnection, ICommonMasterRepo commonMasterRepo)
         {
             _configuration = configuration;
             this._logger = logger;
             this.sqlConnection = _sqlConnection;
+            this.commonMasterRepo = commonMasterRepo;
         }
 
 
@@ -146,6 +148,17 @@ namespace FLEXIERP.DataAccessLayer
             }
             catch (Exception ex)
             {
+                await commonMasterRepo.SaveUserErrorLogAsync(new UserErrorLogDto
+                {
+                    Module = "Account",
+                    ActionType = "Login",
+                    ErrorMessage = ex.Message,
+                    ErrorCode = ex.HResult.ToString(),
+                    StackTrace = ex.StackTrace,
+                    ApiName = "Login",
+                    Severity = "High",
+                    AdditionalInfo = $"{ex.InnerException?.Message ?? string.Empty}, An unexpected error occurred in login"
+                });
                 Console.WriteLine(ex.ToString());
                 throw;
             }

@@ -3,6 +3,7 @@ using FLEXIERP.BusinessLayer;
 using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DATABASE;
+using FLEXIERP.MODELS;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -106,7 +107,33 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.MapControllers();
 
-app.Run();
+using (var scope = app.Services.CreateScope())
+{
+    var errorRepo = scope.ServiceProvider.GetRequiredService<ICommonMasterRepo>();
+
+    try
+    {
+        app.Run(); // your main run
+    }
+    catch (Exception ex)
+    {
+        // Log the global startup error
+        await errorRepo.SaveUserErrorLogAsync(new UserErrorLogDto
+        {
+            Module = "Startup",
+            ActionType = "Program.cs",
+            ErrorMessage = ex.Message,
+            ErrorCode = ex.HResult.ToString(),
+            StackTrace = ex.StackTrace,
+            ApiName = "ApplicationStart",
+            Severity = "Critical",
+            AdditionalInfo = $"{ex.InnerException?.Message ?? string.Empty}, Error during application startup"
+        });
+
+        throw; // optional: rethrow to let .NET handle fatal errors
+    }
+}
+
 
 
 
