@@ -139,3 +139,4 @@ using (var scope = app.Services.CreateScope())
 
 //dotnet publish -c Release -r win-x64 /p:PublishSingleFile=true /p:SelfContained=true
 //publish path -  C:\Users\VIKAS NAGAR\source\repos\FLEXIERP\bin\Release\net8.0\win-x64\publish
+//setx FLEXIERP_AES_KEY "flexierp123456789"
