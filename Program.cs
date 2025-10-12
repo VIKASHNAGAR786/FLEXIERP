@@ -3,7 +3,6 @@ using FLEXIERP.BusinessLayer;
 using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DATABASE;
-using FLEXIERP.MODELS;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -107,36 +106,9 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
-{
-    var errorRepo = scope.ServiceProvider.GetRequiredService<ICommonMasterRepo>();
-
-    try
-    {
-        app.Run(); // your main run
-    }
-    catch (Exception ex)
-    {
-        // Log the global startup error
-        await errorRepo.SaveUserErrorLogAsync(new UserErrorLogDto
-        {
-            Module = "Startup",
-            ActionType = "Program.cs",
-            ErrorMessage = ex.Message,
-            ErrorCode = ex.HResult.ToString(),
-            StackTrace = ex.StackTrace,
-            ApiName = "ApplicationStart",
-            Severity = "Critical",
-            AdditionalInfo = $"{ex.InnerException?.Message ?? string.Empty}, Error during application startup"
-        });
-
-        throw; // optional: rethrow to let .NET handle fatal errors
-    }
-}
-
+app.Run();
 
 
 
 //dotnet publish -c Release -r win-x64 /p:PublishSingleFile=true /p:SelfContained=true
 //publish path -  C:\Users\VIKAS NAGAR\source\repos\FLEXIERP\bin\Release\net8.0\win-x64\publish
-//setx FLEXIERP_AES_KEY "flexierp123456789"

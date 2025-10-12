@@ -2,6 +2,7 @@
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
+using FLEXIERP.MODELS;
 using QuestPDF;
 using QuestPDF.Drawing;
 using QuestPDF.Fluent;
@@ -239,6 +240,13 @@ namespace FLEXIERP.BusinessLayer
             }
         }
 
+        #endregion
+
+        #region cheque details 
+        public async Task<List<ReceivedChequeDto>> GetReceivedChequesAsync(PaginationFilter pagination)
+        {
+            return await this.commonmaster.GetReceivedChequesAsync(pagination);
+        }
         #endregion
 
     }

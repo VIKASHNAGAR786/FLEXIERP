@@ -198,4 +198,22 @@
         public string TransactionType { get; set; } = "";
     }
 
+    public class ReceivedChequeDto
+    {
+        public long SrNo { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string CustomerAddress { get; set; } = string.Empty;
+        public string PhoneNo { get; set; } = string.Empty;
+        public string ChequeNumber { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+        public string ChequeDate { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string ifsc_Code { get; set; } = string.Empty;
+        public string CreatedAt { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public int TotalRecords { get; set; }
+    }
+
+
 }

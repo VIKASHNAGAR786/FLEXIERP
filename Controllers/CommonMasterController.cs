@@ -68,5 +68,25 @@ namespace FLEXIERP.Controllers
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
         #endregion
+
+        #region cheque details 
+        [HttpGet("GetReceivedChequesAsync")]
+        public async Task<IActionResult> GetReceivedChequesAsync([FromQuery] PaginationFilter pagination)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var result = await commonservice.GetReceivedChequesAsync(pagination);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
     }
 }

@@ -9,5 +9,9 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<int> SaveCashPaymentAsync(SaveCashPaymentDto cashPayment);
         public Task<DashboardMetricsDto?> GetDashboardMetricsAsync(string startDate, string endDate);
         public Task<int> SaveUserErrorLogAsync(UserErrorLogDto errorLog);
+
+        #region cheque details 
+        public Task<List<ReceivedChequeDto>> GetReceivedChequesAsync(PaginationFilter pagination);
+        #endregion
     }
 }

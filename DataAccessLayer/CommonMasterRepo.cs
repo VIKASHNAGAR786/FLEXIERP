@@ -300,5 +300,61 @@ namespace FLEXIERP.DataAccessLayer
         }
 
         #endregion
+
+        #region Cheque Details
+        public async Task<List<ReceivedChequeDto>> GetReceivedChequesAsync(PaginationFilter pagination)
+        {
+            var cheques = new List<ReceivedChequeDto>();
+
+            try
+            {
+                using var connection = sqlConnection.GetConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "sp_GetReceivedCheques";
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pagination.PageNo });
+                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pagination.PageSize });
+                cmd.Parameters.Add(new SqlParameter("@SearchText", SqlDbType.NVarChar, 100) { Value = pagination.SearchTerm ?? string.Empty });
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    var cheque = new ReceivedChequeDto
+                    {
+                        SrNo = !reader.IsDBNull(0) ? reader.GetInt64(0) : 0,
+                        CustomerName = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        CustomerAddress = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        PhoneNo = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        ChequeNumber = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        BankName = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
+                        BranchName = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
+                        ChequeDate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
+                        Amount = !reader.IsDBNull(8) ? reader.GetDecimal(8) : 0,
+                        ifsc_Code = !reader.IsDBNull(9) ? reader.GetString(9) : string.Empty,
+                        CreatedAt = !reader.IsDBNull(10) ? reader.GetString(10) : string.Empty,
+                        FullName = !reader.IsDBNull(11) ? reader.GetString(11) : string.Empty,
+                        TotalRecords = !reader.IsDBNull(12) ? reader.GetInt32(12) : 0
+                    };
+
+                    cheques.Add(cheque);
+                }
+
+                return cheques;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Failed to retrieve received cheques. Please try again later.", ex);
+            }
+            finally
+            {
+                await sqlConnection.GetConnection().CloseAsync();
+            }
+        }
+
+        #endregion
     }
 }
