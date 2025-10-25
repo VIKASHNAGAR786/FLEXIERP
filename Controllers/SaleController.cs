@@ -89,7 +89,7 @@ namespace FLEXIERP.Controllers
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
 
-                var pdfBytes = await _saleService.GetSalesReportPdf(filter);
+                var pdfBytes = await _saleService.GetSalesReportPdf(filter, (int)userid);
                 return File(pdfBytes, "application/pdf", "SampleReport.pdf");
             }
             catch (Exception ex)
@@ -105,7 +105,7 @@ namespace FLEXIERP.Controllers
             if (userid == null)
                 return Unauthorized("User ID not found in token.");
             // Call service to get Excel file bytes
-            byte[] fileBytes = await _saleService.GetSalesReportExcel(filter);
+            byte[] fileBytes = await _saleService.GetSalesReportExcel(filter, (int)userid);
 
             if (fileBytes == null || fileBytes.Length == 0)
                 return NotFound("No data found for the given filter.");

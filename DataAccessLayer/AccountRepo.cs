@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using FLEXIERP.MODELS;
+using Microsoft.Data.Sqlite;
 
 namespace FLEXIERP.DataAccessLayer
 {
@@ -101,7 +102,20 @@ namespace FLEXIERP.DataAccessLayer
                 var user = await GetUserFromReader(reader, password);
 
                 if (user == null)
+                {
+                    await commonMasterRepo.SaveUserErrorLogAsync(new UserErrorLogDto
+                    {
+                        Module = "Account",
+                        ActionType = "Login",
+                        ErrorMessage = "USER NOT FOUND",
+                        ErrorCode = "500",
+                        StackTrace = "FBGNB",
+                        ApiName = "Login",
+                        Severity = "High",
+                        AdditionalInfo = $" An unexpected error occurred in login"
+                    });
                     return null;
+                }
 
                 // Generate JWT Token
                 var tokenHandler = new JwtSecurityTokenHandler();
@@ -167,69 +181,44 @@ namespace FLEXIERP.DataAccessLayer
                 await sqlConnection.GetConnection().CloseAsync();
             }
         }
-        private async Task<User1?> GetUserFromReader(SqlDataReader reader, string plainPassword)
+        private async Task<User1?> GetUserFromReader(SqliteDataReader reader, string plainPassword)
         {
             using (reader)
             {
-                if (reader.HasRows)
+                if (reader.HasRows && await reader.ReadAsync())
                 {
-                    if (await reader.ReadAsync())
+                    var hashedPassword = reader["PasswordHash"]?.ToString() ?? "";
+
+                    bool isPasswordValid = VerifyPassword(plainPassword, hashedPassword);
+                    if (!isPasswordValid)
+                        throw new InvalidOperationException("Invalid password");
+
+                    return new User1
                     {
-                        var hashedPassword = reader.GetString(reader.GetOrdinal("PasswordHash"));
-
-                        // Use your password verification method here
-                        bool isPasswordValid = VerifyPassword(plainPassword, hashedPassword);
-                        if (!isPasswordValid)
-                            throw new InvalidOperationException();
-
-                        return new User1
-                        {
-                            Id = reader.GetInt32(reader.GetOrdinal("UserID")),
-                            Username = reader.GetString(reader.GetOrdinal("Username")),
-                            FullName = reader.GetString(reader.GetOrdinal("FullName")),
-                            Email = reader.GetString(reader.GetOrdinal("Email")),
-                            PasswordHash = hashedPassword,
-                            RoleID = reader.GetInt32(reader.GetOrdinal("RoleID")),
-                            IsActive = reader.IsDBNull(reader.GetOrdinal("IsActive"))
-                               ? null
-                               : reader.GetBoolean(reader.GetOrdinal("IsActive")),
-                            MobileNo = reader.IsDBNull(reader.GetOrdinal("MobileNo"))
-                               ? null
-                               : reader.GetString(reader.GetOrdinal("MobileNo")),
-                            Gender = reader.IsDBNull(reader.GetOrdinal("Gender"))
-                             ? null
-                             : reader.GetString(reader.GetOrdinal("Gender")),
-                            DateOfBirth = reader.GetDateTime(reader.GetOrdinal("DateOfBirth")),
-                            Address = reader.IsDBNull(reader.GetOrdinal("Address"))
-                              ? null
-                              : reader.GetString(reader.GetOrdinal("Address")),
-                            City = reader.IsDBNull(reader.GetOrdinal("City"))
-                           ? null
-                           : reader.GetString(reader.GetOrdinal("City")),
-                            State = reader.IsDBNull(reader.GetOrdinal("State"))
-                            ? null
-                            : reader.GetString(reader.GetOrdinal("State")),
-                            Country = reader.IsDBNull(reader.GetOrdinal("Country"))
-                              ? null
-                              : reader.GetString(reader.GetOrdinal("Country")),
-                            ProfileImageUrl = reader.IsDBNull(reader.GetOrdinal("ProfileImageUrl"))
-                                      ? null
-                                      : reader.GetString(reader.GetOrdinal("ProfileImageUrl")),
-                            LastLoginAt = reader.IsDBNull(reader.GetOrdinal("LastLoginAt"))
-                                  ? DateTime.Today
-                                  : reader.GetDateTime(reader.GetOrdinal("LastLoginAt")),
-                            IsEmailVerified = reader.IsDBNull(reader.GetOrdinal("IsEmailVerified"))
-                                      ? null
-                                      : reader.GetBoolean(reader.GetOrdinal("IsEmailVerified")),
-                            Token = null
-                        };
-                    }
-                    return null;
-
+                        Id = Convert.ToInt32(reader["UserID"]),
+                        Username = reader["Username"]?.ToString() ?? "",
+                        FullName = reader["FullName"]?.ToString() ?? "",
+                        Email = reader["Email"]?.ToString() ?? "",
+                        PasswordHash = hashedPassword,
+                        RoleID = Convert.ToInt32(reader["RoleID"]),
+                        IsActive = reader["IsActive"] != DBNull.Value ? Convert.ToBoolean(reader["IsActive"]) : null,
+                        MobileNo = reader["MobileNo"]?.ToString(),
+                        Gender = reader["Gender"]?.ToString(),
+                        DateOfBirth = reader["DateOfBirth"] != DBNull.Value ? Convert.ToDateTime(reader["DateOfBirth"]) : DateTime.MinValue,
+                        Address = reader["Address"]?.ToString(),
+                        City = reader["City"]?.ToString(),
+                        State = reader["State"]?.ToString(),
+                        Country = reader["Country"]?.ToString(),
+                        ProfileImageUrl = reader["ProfileImageUrl"]?.ToString(),
+                        LastLoginAt = reader["LastLoginAt"] != DBNull.Value ? Convert.ToDateTime(reader["LastLoginAt"]) : DateTime.Now,
+                        IsEmailVerified = reader["IsEmailVerified"] != DBNull.Value ? Convert.ToBoolean(reader["IsEmailVerified"]) : null,
+                        Token = null
+                    };
                 }
                 return null;
             }
         }
+
         public async Task<User1> Register(User1 user1)
         {
             if (string.IsNullOrEmpty(user1.PasswordHash))
@@ -237,55 +226,102 @@ namespace FLEXIERP.DataAccessLayer
 
             user1.PasswordHash = HashPassword(user1.PasswordHash);
 
+            var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+
             try
             {
-                await sqlConnection.GetConnection().OpenAsync();
-                // Insert new user
-                var insertCmd = sqlConnection.GetConnection().CreateCommand();
-                insertCmd.CommandText = @"pro_Tbl_Users_insert";
-                insertCmd.CommandType = CommandType.StoredProcedure;
-
-                // insertCmd.Parameters.AddWithValue("@p_FullName", user1.FullName);
-                insertCmd.Parameters.Add(new SqlParameter
+                // 1️⃣ Check if user exists
+                using (var checkCmd = connection.CreateCommand())
                 {
-                    ParameterName = "@p_FullName",
-                    SqlDbType = SqlDbType.VarChar,
-                    SqlValue = user1.FullName,
-                    Direction = ParameterDirection.Input,
-                });
-                insertCmd.Parameters.AddWithValue("@p_Username", user1.Username);
-                insertCmd.Parameters.AddWithValue("@p_Email", user1.Email);
-                insertCmd.Parameters.AddWithValue("@p_PasswordHash", user1.PasswordHash);
-                insertCmd.Parameters.AddWithValue("@p_MobileNo", user1.MobileNo);
-                insertCmd.Parameters.AddWithValue("@p_Gender", user1.Gender);
-                insertCmd.Parameters.AddWithValue("@p_DateOfBirth", user1.DateOfBirth);
-                insertCmd.Parameters.AddWithValue("@p_Address", user1.Address);
-                insertCmd.Parameters.AddWithValue("@p_City", user1.City);
-                insertCmd.Parameters.AddWithValue("@p_State", user1.Username);
-                insertCmd.Parameters.AddWithValue("@p_Country", user1.Country);
-                insertCmd.Parameters.AddWithValue("@p_ProfileImageUrl", user1.ProfileImageUrl);
-                insertCmd.Parameters.AddWithValue("@p_RoleID ", user1.RoleID);
-                insertCmd.Parameters.AddWithValue("@p_LastLoginAt", user1.LastLoginAt);
-                insertCmd.Parameters.AddWithValue("@p_IsActive", user1.IsActive);
-                insertCmd.Parameters.AddWithValue("@p_IsEmailVerified", user1.IsEmailVerified);
+                    checkCmd.CommandText = @"SELECT 1 FROM Tbl_Users WHERE Email = @p_Email OR Username = @p_Username LIMIT 1;";
+                    checkCmd.Parameters.AddWithValue("@p_Email", user1.Email);
+                    checkCmd.Parameters.AddWithValue("@p_Username", user1.Username);
 
-
-                int insertedUserId = await insertCmd.ExecuteNonQueryAsync();
-                if (insertedUserId <= 0)
-                {
-                    throw new Exception("User registration failed. Please try again.");
+                    var exists = await checkCmd.ExecuteScalarAsync();
+                    if (exists != null)
+                    {
+                        throw new Exception("Email or Username already exists.");
+                    }
                 }
-                return user1;
 
+                // 2️⃣ Insert into Tbl_Users
+                using (var insertUserCmd = connection.CreateCommand())
+                {
+                    insertUserCmd.CommandText = @"
+                INSERT INTO Tbl_Users (
+                    FullName, Username, Email, PasswordHash, MobileNo, Gender, DateOfBirth,
+                    Address, City, State, Country, ProfileImageUrl, RoleID, LastLoginAt,
+                    IsActive, IsEmailVerified
+                ) VALUES (
+                    @p_FullName, @p_Username, @p_Email, @p_PasswordHash, @p_MobileNo, @p_Gender, @p_DateOfBirth,
+                    @p_Address, @p_City, @p_State, @p_Country, @p_ProfileImageUrl, @p_RoleID, @p_LastLoginAt,
+                    @p_IsActive, @p_IsEmailVerified
+                );";
+
+                    insertUserCmd.Parameters.AddWithValue("@p_FullName", user1.FullName);
+                    insertUserCmd.Parameters.AddWithValue("@p_Username", user1.Username);
+                    insertUserCmd.Parameters.AddWithValue("@p_Email", user1.Email);
+                    insertUserCmd.Parameters.AddWithValue("@p_PasswordHash", user1.PasswordHash);
+                    insertUserCmd.Parameters.AddWithValue("@p_MobileNo", user1.MobileNo ?? "0000000000");
+                    insertUserCmd.Parameters.AddWithValue("@p_Gender", user1.Gender ?? "NotSpecified");
+                    insertUserCmd.Parameters.AddWithValue("@p_DateOfBirth", user1.DateOfBirth);
+                    insertUserCmd.Parameters.AddWithValue("@p_Address", user1.Address ?? "N/A");
+                    insertUserCmd.Parameters.AddWithValue("@p_City", user1.City ?? "N/A");
+                    insertUserCmd.Parameters.AddWithValue("@p_State", user1.State ?? "N/A");
+                    insertUserCmd.Parameters.AddWithValue("@p_Country", user1.Country ?? "N/A");
+                    insertUserCmd.Parameters.AddWithValue("@p_ProfileImageUrl", user1.ProfileImageUrl ?? "default.png");
+                    insertUserCmd.Parameters.AddWithValue("@p_RoleID", user1.RoleID);
+                    insertUserCmd.Parameters.AddWithValue("@p_LastLoginAt", user1.LastLoginAt);
+                    insertUserCmd.Parameters.AddWithValue("@p_IsActive", user1.IsActive ?? true);
+                    insertUserCmd.Parameters.AddWithValue("@p_IsEmailVerified", user1.IsEmailVerified ?? false);
+
+                    await insertUserCmd.ExecuteNonQueryAsync();
+                }
+
+                // 3️⃣ Get last inserted user ID
+                long lastUserId;
+                using (var idCmd = connection.CreateCommand())
+                {
+                    idCmd.CommandText = "SELECT last_insert_rowid();";
+                    lastUserId = (long)await idCmd.ExecuteScalarAsync();
+                }
+
+                // 4️⃣ Insert into Company_info with dummy values
+                using (var insertCompanyCmd = connection.CreateCommand())
+                {
+                    insertCompanyCmd.CommandText = @"
+                INSERT INTO Company_info (
+                    Company_Name, Contact_No, WhatsApp_No, Email, Address, CreatedBy, CompanyLogo
+                ) VALUES (
+                    @Company_Name, @Contact_No, @WhatsApp_No, @Email, @Address, @CreatedBy, @CompanyLogo
+                );";
+
+                    insertCompanyCmd.Parameters.AddWithValue("@Company_Name", "Dummy Company");
+                    insertCompanyCmd.Parameters.AddWithValue("@Contact_No", user1.MobileNo ?? "0000000000");
+                    insertCompanyCmd.Parameters.AddWithValue("@WhatsApp_No", "0000000000");
+                    insertCompanyCmd.Parameters.AddWithValue("@Email", user1.Email);
+                    insertCompanyCmd.Parameters.AddWithValue("@Address", user1.Address ?? "N/A");
+                    insertCompanyCmd.Parameters.AddWithValue("@CreatedBy", lastUserId);
+                    insertCompanyCmd.Parameters.AddWithValue("@CompanyLogo", "default_logo.png");
+
+                    await insertCompanyCmd.ExecuteNonQueryAsync();
+                }
+
+                transaction.Commit();
+                return user1;
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
-                _logger.LogError($"Error during user registration: {ex.Message}");
-                throw new Exception("User registration failed. Please try again later.");
+                transaction.Rollback();
+                _logger.LogError($"SQLite error during registration: {ex.Message}");
+                throw new Exception("User registration failed. Please try again later.", ex);
             }
             finally
             {
-                await sqlConnection.GetConnection().CloseAsync();
+                await connection.CloseAsync();
             }
         }
 
@@ -293,31 +329,73 @@ namespace FLEXIERP.DataAccessLayer
         {
             try
             {
-                var connection = this.sqlConnection.GetConnection();
+                var connection = sqlConnection.GetConnection();
                 await connection.OpenAsync();
 
-                using (var cmd = connection.CreateCommand())
+                using var cmd = connection.CreateCommand();
+                cmd.CommandType = CommandType.Text;
+
+                cmd.CommandText = @"
+            -- Get user ID and password from Tbl_Users
+            SELECT UserID, PasswordHash
+            FROM Tbl_Users
+            WHERE Username = @Username;
+        ";
+
+                cmd.Parameters.AddWithValue("@Username", loginModel.Username);
+
+                int? userId = null;
+                string? dbPassword = null;
+
+                using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    cmd.CommandText = "pro_UserLoginAttempt";
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    // Parameters
-                    cmd.Parameters.Add(new SqlParameter("@Username", SqlDbType.NVarChar, 50) { Value = loginModel.Username });
-                    cmd.Parameters.Add(new SqlParameter("@Password", SqlDbType.NVarChar, 256) { Value = loginModel.Password });
-                    cmd.Parameters.Add(new SqlParameter("@IPAddress", SqlDbType.VarChar, 50) { Value = (object?)loginModel.IPAddress ?? DBNull.Value });
-                    cmd.Parameters.Add(new SqlParameter("@DeviceInfo", SqlDbType.VarChar, 255) { Value = (object?)loginModel.DeviceInfo ?? DBNull.Value });
-
-                    // Execute SP
-                    var rows = await cmd.ExecuteNonQueryAsync();
-
-                    // Since SP does not return success explicitly, 
-                    // we return true if SP executed without exception
-                    return rows > 0;
+                    if (await reader.ReadAsync())
+                    {
+                        userId = reader["UserID"] != DBNull.Value ? Convert.ToInt32(reader["UserID"]) : (int?)null;
+                        dbPassword = reader["PasswordHash"]?.ToString();
+                    }
                 }
+
+                // Prepare insert into UserLoginHistory
+                using var insertCmd = connection.CreateCommand();
+                insertCmd.CommandType = CommandType.Text;
+
+                if (userId == null)
+                {
+                    // User not found
+                    insertCmd.CommandText = @"
+                INSERT INTO UserLoginHistory (UserID, IsSuccess, IPAddress, DeviceInfo, FailureReason)
+                VALUES (2, 0, @IPAddress, @DeviceInfo, 'User not found');
+            ";
+                }
+                else if (dbPassword == loginModel.Password)
+                {
+                    // Successful login
+                    insertCmd.CommandText = @"
+                INSERT INTO UserLoginHistory (UserID, IsSuccess, IPAddress, DeviceInfo)
+                VALUES (@UserID, 1, @IPAddress, @DeviceInfo);
+            ";
+                    insertCmd.Parameters.AddWithValue("@UserID", userId);
+                }
+                else
+                {
+                    // Invalid password
+                    insertCmd.CommandText = @"
+                INSERT INTO UserLoginHistory (UserID, IsSuccess, IPAddress, DeviceInfo, FailureReason)
+                VALUES (@UserID, 0, @IPAddress, @DeviceInfo, 'Invalid Password');
+            ";
+                    insertCmd.Parameters.AddWithValue("@UserID", userId);
+                }
+
+                insertCmd.Parameters.AddWithValue("@IPAddress", loginModel.IPAddress ?? "Unknown");
+                insertCmd.Parameters.AddWithValue("@DeviceInfo", loginModel.DeviceInfo ?? "Unknown");
+
+                int rows = await insertCmd.ExecuteNonQueryAsync();
+
+                return rows > 0;
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
-                // Log error
                 throw new Exception("Login attempt failed due to database error.", ex);
             }
             finally
@@ -325,6 +403,7 @@ namespace FLEXIERP.DataAccessLayer
                 await sqlConnection.GetConnection().CloseAsync();
             }
         }
+
         public async Task<bool> LogoutUser(int userId)
         {
             try
@@ -332,29 +411,25 @@ namespace FLEXIERP.DataAccessLayer
                 var connection = sqlConnection.GetConnection();
                 await connection.OpenAsync();
 
-                using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = "pro_UserLogout";
-                    cmd.CommandType = CommandType.StoredProcedure;
+                using var cmd = connection.CreateCommand();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = @"
+            UPDATE UserLoginHistory
+            SET LogoutTime = CURRENT_TIMESTAMP
+            WHERE UserID = @UserID
+              AND IsSuccess = 1
+              AND LogoutTime IS NULL;
 
-                    // Add parameter
-                    cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.Int) { Value = userId });
+            SELECT changes() AS RowsUpdated;
+        ";
 
-                    // Execute SP
-                    var rowsAffected = await cmd.ExecuteScalarAsync();
+                cmd.Parameters.AddWithValue("@UserID", userId);
 
-                    // Return true if any row was updated
-                    if (rowsAffected is not null)
-                        return (int)rowsAffected > 0;
-                    else
-                    {
-                        return false;
-                    }
-                }
+                var result = await cmd.ExecuteScalarAsync();
+                return result is not null && Convert.ToInt32(result) > 0;
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
-                // Log exception if needed
                 throw new Exception("Logout failed due to database error.", ex);
             }
             finally
@@ -373,32 +448,47 @@ namespace FLEXIERP.DataAccessLayer
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "usp_GetUserLoginHistory";
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = @"
+            SELECT
+                h.HistoryID,
+                u.Username,
+                u.Email,
+                strftime('%Y-%m-%d %H:%M:%S', h.LoginTime) AS LoginTime,
+                COALESCE(strftime('%Y-%m-%d %H:%M:%S', h.LogoutTime), 'N/A') AS LogoutTime,
+                CASE WHEN h.IsSuccess = 1 THEN 'Success' ELSE 'Failed' END AS Status,
+                h.IPAddress,
+                h.DeviceInfo,
+                COALESCE(h.FailureReason, '-') AS FailureReason,
+                (SELECT COUNT(*) FROM UserLoginHistory) AS TotalRecords
+            FROM UserLoginHistory h
+            LEFT JOIN Tbl_Users u ON h.UserID = u.UserID
+            ORDER BY h.LoginTime DESC
+            LIMIT @PageSize OFFSET (@PageNo - 1) * @PageSize;
+        ";
 
-                // Add parameters
-                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pageNo });
-                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pageSize });
+                cmd.Parameters.AddWithValue("@PageNo", pageNo);
+                cmd.Parameters.AddWithValue("@PageSize", pageSize);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     historyList.Add(new UserLoginHistoryDTO
                     {
-                        HistoryID = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
-                        Username = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
-                        Email = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
-                        LoginTime = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
-                        LogoutTime = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
-                        Status = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
-                        IPAddress = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
-                        DeviceInfo = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
-                        FailureReason = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
-                        TotalRecords = !reader.IsDBNull(9) ? reader.GetInt32(9) : 0
+                        HistoryID = reader.GetInt32(0),
+                        Username = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                        Email = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                        LoginTime = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                        LogoutTime = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                        Status = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                        IPAddress = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                        DeviceInfo = reader.IsDBNull(7) ? string.Empty : reader.GetString(7),
+                        FailureReason = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
+                        TotalRecords = reader.IsDBNull(9) ? 0 : reader.GetInt32(9)
                     });
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 throw new Exception("Failed to retrieve user login history. Please try again later.", ex);
             }
@@ -413,16 +503,35 @@ namespace FLEXIERP.DataAccessLayer
         public async Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId)
         {
             CompanyInfoDto? companyInfo = null;
+
             try
             {
                 using var connection = sqlConnection.GetConnection();
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "SELECT * FROM dbo.fun_CompanyInfoByUser_get(@UserID)";
                 cmd.CommandType = CommandType.Text;
 
-                cmd.Parameters.Add(new SqlParameter("@UserID", SqlDbType.Int) { Value = userId });
+                // SQLite query (no table-valued function)
+                cmd.CommandText = @"
+                           SELECT 
+                    comp.Com_info_id,  
+                    comp.Company_Name,  
+                    comp.Contact_No,  
+                    comp.WhatsApp_No,  
+                    comp.Email,  
+                    comp.Address,  
+                    users.FullName AS UserFullName,  
+                    strftime('%Y-%m-%d %H:%M:%S', comp.CreatedDate) AS CreatedDate,
+                    comp.CompanyLogo
+                FROM Company_info AS comp
+                LEFT JOIN Tbl_Users AS users ON comp.CreatedBy = users.UserID
+                WHERE comp.CreatedBy = @UserID
+                LIMIT 1;
+
+                ";
+
+                cmd.Parameters.AddWithValue("@UserID", userId);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -436,12 +545,12 @@ namespace FLEXIERP.DataAccessLayer
                         Email = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
                         Address = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
                         FullName = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
-                        CreatedDate = !reader.IsDBNull(7) ? reader.GetString(7) :string.Empty,
+                        CreatedDate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
                         CompanyLogo = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty
                     };
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 throw new Exception("Failed to retrieve company info. Please try again later.", ex);
             }
@@ -453,74 +562,49 @@ namespace FLEXIERP.DataAccessLayer
             return companyInfo;
         }
 
-        public async Task<int> UpdateCompanyInfo(UpdateCompanyInfo UpdateCompanyInfo)
+        public async Task<int> UpdateCompanyInfo(UpdateCompanyInfo info)
         {
             try
             {
-                var connection = sqlConnection.GetConnection();
+                using var connection = sqlConnection.GetConnection(); // your SQLite connection service
                 await connection.OpenAsync();
 
-                using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = "UpdateCompanyInfo";
-                    cmd.CommandType = CommandType.StoredProcedure;
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"
+            UPDATE Company_info
+            SET 
+                Company_Name = COALESCE(@Company_Name, Company_Name),
+                Contact_No   = COALESCE(@Contact_No, Contact_No),
+                WhatsApp_No  = COALESCE(@WhatsApp_No, WhatsApp_No),
+                Email        = COALESCE(@Email, Email),
+                Address      = COALESCE(@Address, Address),
+                UpdatedBy    = COALESCE(@UpdatedBy, UpdatedBy),
+                UpdatedDate  = CURRENT_TIMESTAMP,
+                CompanyLogo  = COALESCE(@CompanyLogo, CompanyLogo)
+            WHERE Com_info_id = @row_id;
+        ";
 
-                    // Add parameters
-                    cmd.Parameters.Add(new SqlParameter("@Company_Name", SqlDbType.VarChar)
-                    {
-                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.Company_Name) ? DBNull.Value : UpdateCompanyInfo.Company_Name
-                    });
+                // Add parameters
+                cmd.Parameters.Add(new SqliteParameter("@Company_Name", string.IsNullOrEmpty(info.Company_Name) ? DBNull.Value : info.Company_Name));
+                cmd.Parameters.Add(new SqliteParameter("@Contact_No", string.IsNullOrEmpty(info.Contact_No) ? DBNull.Value : info.Contact_No));
+                cmd.Parameters.Add(new SqliteParameter("@WhatsApp_No", string.IsNullOrEmpty(info.WhatsApp_No) ? DBNull.Value : info.WhatsApp_No));
+                cmd.Parameters.Add(new SqliteParameter("@Email", string.IsNullOrEmpty(info.Email) ? DBNull.Value : info.Email));
+                cmd.Parameters.Add(new SqliteParameter("@Address", string.IsNullOrEmpty(info.Address) ? DBNull.Value : info.Address));
+                cmd.Parameters.Add(new SqliteParameter("@row_id", info.row_id));
+                cmd.Parameters.Add(new SqliteParameter("@UpdatedBy", info.UpdatedBy == 0 ? DBNull.Value : info.UpdatedBy));
+                cmd.Parameters.Add(new SqliteParameter("@CompanyLogo", string.IsNullOrEmpty(info.CompanyLogo) ? DBNull.Value : info.CompanyLogo));
 
-                    cmd.Parameters.Add(new SqlParameter("@Contact_No", SqlDbType.VarChar)
-                    {
-                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.Contact_No) ? DBNull.Value : UpdateCompanyInfo.Contact_No
-                    });
-
-                    cmd.Parameters.Add(new SqlParameter("@WhatsApp_No", SqlDbType.VarChar)
-                    {
-                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.WhatsApp_No) ? DBNull.Value : UpdateCompanyInfo.WhatsApp_No
-                    });
-
-                    cmd.Parameters.Add(new SqlParameter("@Email", SqlDbType.VarChar)
-                    {
-                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.Email) ? DBNull.Value : UpdateCompanyInfo.Email
-                    });
-
-                    cmd.Parameters.Add(new SqlParameter("@Address", SqlDbType.VarChar)
-                    {
-                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.Address) ? DBNull.Value : UpdateCompanyInfo.Address
-                    });
-
-                    cmd.Parameters.Add(new SqlParameter("@row_id", SqlDbType.Int)
-                    {
-                        Value = UpdateCompanyInfo.row_id
-                    });
-
-                    cmd.Parameters.Add(new SqlParameter("@UpdatedBy", SqlDbType.Int)
-                    {
-                        Value = UpdateCompanyInfo.UpdatedBy
-                    });
-
-                    cmd.Parameters.Add(new SqlParameter("@CompanyLogo", SqlDbType.VarChar)
-                    {
-                        Value = string.IsNullOrEmpty(UpdateCompanyInfo.CompanyLogo) ? DBNull.Value : UpdateCompanyInfo.CompanyLogo
-                    });
-
-                    // Execute SP
-                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
-                    return rowsAffected;
-                }
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected;
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                // Log exception if needed
-                throw new Exception("Logout failed due to database error.", ex);
-            }
-            finally
-            {
-                await sqlConnection.GetConnection().CloseAsync();
+                throw new Exception("Failed to update company info (SQLite).", ex);
             }
         }
+
+
+
         #region Customer Ledger
         public async Task<int> Savecustomerledger(Customerledgermodel customerledger)
         {
@@ -584,44 +668,56 @@ namespace FLEXIERP.DataAccessLayer
         public async Task<IEnumerable<CustomerledgerDto?>> GetCustomerledger(int pageNo = 1, int pageSize = 20)
         {
             var historyList = new List<CustomerledgerDto?>();
+            string query = @"
+        SELECT 
+            C.CustomerID,
+            C.CustomerName,
+            C.PhoneNo,
+            C.CustomerAddress,
+            C.Email,
+            IFNULL(SUM(L.paid_amt), 0) AS TotalPaidAmount_Yet,
+            IFNULL(SUM(L.balance_due), 0) AS TotalDue_Yet,
+            STRFTIME('%Y-%m-%d %H:%M', MAX(L.create_at)) AS LastTransactionDate,
+            MAX(L.customer_id) AS ROWID
+        FROM Customer C
+        LEFT JOIN Customer_Ledger L ON C.CustomerID = L.customer_id
+        GROUP BY C.CustomerID
+        ORDER BY C.CustomerName
+        LIMIT @PageSize OFFSET ((@PageNo - 1) * @PageSize);
+    ";
 
             try
             {
-                using var connection = sqlConnection.GetConnection();
+                using var connection = sqlConnection.GetConnection(); // Should return SQLiteConnection
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "usp_Customer_Ledger_Summary_get";
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = query;
+                cmd.CommandType = CommandType.Text;
 
-                // Add parameters
-                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pageNo });
-                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pageSize });
+                cmd.Parameters.AddWithValue("@PageNo", pageNo);
+                cmd.Parameters.AddWithValue("@PageSize", pageSize);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     historyList.Add(new CustomerledgerDto
                     {
-                        customerid = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
-                        Customername = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
-                        ContactNo = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
-                        CustomerAddress = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
-                        Email = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
-                        totalamount = !reader.IsDBNull(5) ? reader.GetDecimal(5) : decimal.MaxValue,
-                        totaldue = !reader.IsDBNull(6) ? reader.GetDecimal(6) : decimal.MaxValue,
-                        lasttransactiondate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
-                        rowid = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0
+                        customerid = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,                          // CustomerID
+                        Customername = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,            // CustomerName
+                        ContactNo = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,               // PhoneNo
+                        CustomerAddress = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,         // CustomerAddress
+                        Email = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,                   // Email
+                        totalamount = !reader.IsDBNull(5) ? Convert.ToDecimal(reader.GetValue(5)) : 0,      // TotalPaidAmount_Yet
+                        totaldue = !reader.IsDBNull(6) ? Convert.ToDecimal(reader.GetValue(6)) : 0,         // TotalDue_Yet
+                        lasttransactiondate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,     // LastTransactionDate
+                        rowid = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0                                // ROWID
                     });
                 }
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                throw new Exception("Failed to retrieve customer ledger data. Please try again later.", ex);
-            }
-            finally
-            {
-                await sqlConnection.GetConnection().CloseAsync();
+                throw new Exception("Failed to retrieve customer ledger data from SQLite. Please try again later.", ex);
             }
 
             return historyList;
@@ -629,55 +725,100 @@ namespace FLEXIERP.DataAccessLayer
 
         public async Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid, string StartDate, string EndDate)
         {
-            List<CustomerledgerdetailDto?> companyInfo = new List<CustomerledgerdetailDto?>();
+            var ledgerDetails = new List<CustomerledgerdetailDto?>();
+            string query = @"
+       -- Step 1: Calculate total tax per Sale
+WITH SaleTax AS (
+    SELECT 
+        sd.SaleID,
+        SUM(IFNULL(p.TaxRate, 0)) AS TotalTax
+    FROM saledetail AS sd
+    INNER JOIN product AS p ON p.productid = sd.productid
+    GROUP BY sd.SaleID
+),
+-- Step 2: Get the latest Sale per Customer
+LatestSale AS (
+    SELECT
+        s.CustomerID,
+        MAX(s.SaleID) AS LastSaleID
+    FROM Sale s
+    GROUP BY s.CustomerID
+)
+-- Step 3: Ledger Details
+SELECT
+    cl.ledger_id,
+    cl.Customer_ID,
+    cl.paid_amt,
+    cl.Balance_Due,
+    cl.Total_Amt,
+    cl.Payment_Mode,
+    cl.Transaction_Type,
+    STRFTIME('%d-%m-%Y %I:%M %p', cl.create_at) AS TransactionDate,
+    COALESCE(STRFTIME('%d-%m-%Y %I:%M %p', s.createddate),
+             STRFTIME('%d-%m-%Y %I:%M %p', cl.create_at)) AS SaleDate,
+    COALESCE(s.TotalItems, 0) AS TotalItems,
+    COALESCE(s.TotalDiscount, 0) AS TotalDiscount,
+    COALESCE(st.TotalTax, 0) AS TotalTax,
+    cs.CustomerName,
+    cs.PhoneNo
+FROM Customer_Ledger AS cl
+LEFT JOIN LatestSale ls ON cl.Customer_ID = ls.CustomerID
+LEFT JOIN Customer AS cs ON ls.CustomerID = cs.CustomerID
+LEFT JOIN Sale AS s ON s.SaleID = ls.LastSaleID
+LEFT JOIN SaleTax AS st ON s.SaleID = st.SaleID
+WHERE 
+    cl.Customer_ID = @CustomerID
+    AND (
+        (@StartDate IS NULL AND @EndDate IS NULL)
+        OR (DATE(cl.create_at) BETWEEN DATE(@StartDate) AND DATE(@EndDate))
+    )
+ORDER BY cl.create_at DESC;
+
+    ";
+
             try
             {
-                using var connection = sqlConnection.GetConnection();
+                using var connection = sqlConnection.GetConnection(); // returns SQLiteConnection
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "usp_Customer_Ledger_Details_get";
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = query;
+                cmd.CommandType = CommandType.Text;
 
-                cmd.Parameters.Add(new SqlParameter("@CustomerID", SqlDbType.Int) { Value = customerid });
-                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.VarChar) { Value = StartDate });
-                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.VarChar) { Value = EndDate });
+                cmd.Parameters.AddWithValue("@CustomerID", customerid);
+                cmd.Parameters.AddWithValue("@StartDate", string.IsNullOrWhiteSpace(StartDate) ? DBNull.Value : StartDate);
+                cmd.Parameters.AddWithValue("@EndDate", string.IsNullOrWhiteSpace(EndDate) ? DBNull.Value : EndDate);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
-                    var data = new CustomerledgerdetailDto
+                    ledgerDetails.Add(new CustomerledgerdetailDto
                     {
                         rowid = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
                         customerid = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
-                        paidamt = !reader.IsDBNull(2) ? reader.GetDecimal(2) : decimal.MaxValue,
-                        balancedue = !reader.IsDBNull(3) ? reader.GetDecimal(3) : decimal.MaxValue,
-                        totalamount = !reader.IsDBNull(4) ? reader.GetDecimal(4) : decimal.MaxValue,
+                        paidamt = !reader.IsDBNull(2) ? Convert.ToDecimal(reader.GetValue(2)) : 0,
+                        balancedue = !reader.IsDBNull(3) ? Convert.ToDecimal(reader.GetValue(3)) : 0,
+                        totalamount = !reader.IsDBNull(4) ? Convert.ToDecimal(reader.GetValue(4)) : 0,
                         paymentmode = !reader.IsDBNull(5) ? reader.GetInt32(5) : 0,
                         transactiontype = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
                         transactiondate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
                         saledate = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
-                        totalitems = !reader.IsDBNull(9) ? reader.GetDecimal(9) : decimal.MaxValue,
-                        totaldiscount = !reader.IsDBNull(10) ? reader.GetDecimal(10) : decimal.MaxValue,
-                        tax = !reader.IsDBNull(11) ? reader.GetDecimal(11) : decimal.MaxValue,
+                        totalitems = !reader.IsDBNull(9) ? Convert.ToDecimal(reader.GetValue(9)) : 0,
+                        totaldiscount = !reader.IsDBNull(10) ? Convert.ToDecimal(reader.GetValue(10)) : 0,
+                        tax = !reader.IsDBNull(11) ? Convert.ToDecimal(reader.GetValue(11)) : 0,
                         customername = !reader.IsDBNull(12) ? reader.GetString(12) : string.Empty,
                         contactno = !reader.IsDBNull(13) ? reader.GetString(13) : string.Empty
-                    };
-                    companyInfo.Add(data);
+                    });
                 }
-                return companyInfo;
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                throw new Exception("Failed to retrieve company info. Please try again later.", ex);
-            }
-            finally
-            {
-                await sqlConnection.GetConnection().CloseAsync();
+                throw new Exception("Failed to retrieve customer ledger details from SQLite. Please try again later.", ex);
             }
 
-            return companyInfo;
+            return ledgerDetails;
         }
+
         #endregion
     }
 }

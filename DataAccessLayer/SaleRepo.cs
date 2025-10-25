@@ -4,6 +4,7 @@ using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using Microsoft.Data.Sqlite;
 
 namespace FLEXIERP.DataAccessLayer
 {
@@ -42,10 +43,54 @@ namespace FLEXIERP.DataAccessLayer
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "usp_GetProductByBarcode";
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.Text;
 
-                cmd.Parameters.Add(new SqlParameter("@BarCode", SqlDbType.BigInt) { Value = barCode });
+                cmd.CommandText = @"
+            SELECT    
+                pr.ProductID,    
+                pr.ProductCode,    
+                pr.BarCode,    
+                pr.ProductName,    
+                category.CategoryName,    
+                pr.ProductType,    
+                pr.PackedDate,    
+                pr.PackedWeight,    
+                pr.PackedHeight,    
+                pr.PackedDepth,    
+                pr.PackedWidth,    
+                pr.IsPerishable,    
+                pr.PurchasePrice,    
+                pr.SellingPrice,    
+                pr.TaxRate,    
+                pr.Discount,
+                (pr.Quantity - IFNULL(SUM(sd.Quantity), 0)) AS AvailableQuantity
+            FROM product AS pr    
+            LEFT JOIN flexi_erp_product_category AS category    
+                ON pr.ProductCategory = category.CategoryID 
+            LEFT JOIN SaleDetail AS sd 
+                ON pr.ProductID = sd.ProductID
+            WHERE pr.BarCode = @BarCode
+            GROUP BY 
+                pr.ProductID,    
+                pr.ProductCode,    
+                pr.BarCode,    
+                pr.ProductName,    
+                category.CategoryName,    
+                pr.ProductType,    
+                pr.PackedDate,    
+                pr.PackedWeight,    
+                pr.PackedHeight,    
+                pr.PackedDepth,    
+                pr.PackedWidth,    
+                pr.IsPerishable,    
+                pr.PurchasePrice,    
+                pr.SellingPrice,    
+                pr.TaxRate,    
+                pr.Discount,
+                pr.Quantity;
+        ";
+
+                cmd.Parameters.AddWithValue("@BarCode", barCode);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -72,7 +117,7 @@ namespace FLEXIERP.DataAccessLayer
                     };
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 throw new Exception("Failed to retrieve product. Please try again later.", ex);
             }
@@ -89,188 +134,131 @@ namespace FLEXIERP.DataAccessLayer
         #region Make Sale 
         public async Task<int> InsertSaleAsync(Sale sale)
         {
+            int saleId = 0;
+
+            using var connection = sqlconnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
             try
             {
-                using var connection = sqlconnection.GetConnection();
-                await connection.OpenAsync();
-
-                using var cmd = connection.CreateCommand();
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.CommandText = "usp_InsertSale";
-
-                // 1️⃣ Sale parameters
-                // 1️⃣ Sale parameters
-                cmd.Parameters.Add(new SqlParameter("@CustomerID", SqlDbType.Int)
+                // 1️⃣ Insert new customer if needed
+                if (sale.customerID == null)
                 {
-                    Value = (object?)sale.customerID ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
+                    using var insertCustomerCmd = connection.CreateCommand();
+                    insertCustomerCmd.Transaction = transaction;
+                    insertCustomerCmd.CommandText = @"
+                INSERT INTO Customer
+                (CustomerName, CustomerAddress, PhoneNo, Email, PaymentMode, CreatedBy, CreatedDate, Remark)
+                VALUES (@CustomerName, @CustomerAddress, @PhoneNo, @Email, @PaymentMode, @CreatedBy, @CreatedDate, @Remark);
+                SELECT last_insert_rowid();";
 
-                cmd.Parameters.Add(new SqlParameter("@CustomerName", SqlDbType.VarChar, 100)
-                {
-                    Value = (object?)sale.Customer?.CustomerName ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
+                    insertCustomerCmd.Parameters.AddWithValue("@CustomerName", (object?)sale.Customer?.CustomerName ?? DBNull.Value);
+                    insertCustomerCmd.Parameters.AddWithValue("@CustomerAddress", (object?)sale.Customer?.CustomerAddress ?? DBNull.Value);
+                    insertCustomerCmd.Parameters.AddWithValue("@PhoneNo", (object?)sale.Customer?.PhoneNo ?? DBNull.Value);
+                    insertCustomerCmd.Parameters.AddWithValue("@Email", (object?)sale.Customer?.Email ?? DBNull.Value);
+                    insertCustomerCmd.Parameters.AddWithValue("@PaymentMode", (object?)sale.Customer?.PaymentMode ?? DBNull.Value);
+                    insertCustomerCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
+                    insertCustomerCmd.Parameters.AddWithValue("@Remark", (object?)sale.Customer?.Remark ?? DBNull.Value);
+                    insertCustomerCmd.Parameters.AddWithValue("@CreatedDate", DateTime.Now);
 
-                cmd.Parameters.Add(new SqlParameter("@CustomerAddress", SqlDbType.VarChar, 255)
-                {
-                    Value = (object?)sale.Customer?.CustomerAddress ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@remark", SqlDbType.VarChar, 255)
-                {
-                    Value = (object?)sale.Customer?.Remark ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@PhoneNo", SqlDbType.VarChar, 50)
-                {
-                    Value = (object?)sale.Customer?.PhoneNo ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@Email", SqlDbType.VarChar, 100)
-                {
-                    Value = (object?)sale.Customer?.Email ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@PaymentMode", SqlDbType.Int)
-                {
-                    Value = (object?)sale.Customer?.PaymentMode ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@paid_amt", SqlDbType.Decimal)
-                {
-                    Value = (object?)sale.Customer?.PaidAmt ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@balance_due", SqlDbType.Decimal)
-                {
-                    Value = (object?)sale.Customer?.BalanceDue ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@total_amt", SqlDbType.Decimal)
-                {
-                    Value = (object?)sale.Customer?.TotalAmt ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@transaction_type", SqlDbType.VarChar)
-                {
-                    Value = (object?)sale.Customer?.TransactionType ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@TotalItems", SqlDbType.Decimal)
-                {
-                    Precision = 10,
-                    Scale = 2,
-                    Value = sale.TotalItems,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@TotalAmount", SqlDbType.Decimal)
-                {
-                    Precision = 18,
-                    Scale = 2,
-                    Value = sale.TotalAmount,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@TotalDiscount", SqlDbType.Decimal)
-                {
-                    Precision = 18,
-                    Scale = 2,
-                    Value = sale.TotalDiscount,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@OrderDate", SqlDbType.Date)
-                {
-                    Value = (object?)sale.OrderDate ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@CreatedBy", SqlDbType.Int)
-                {
-                    Value = (object?)sale.CreatedBy ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                cmd.Parameters.Add(new SqlParameter("@payid", SqlDbType.Int)
-                {
-                    Value = (object?)sale.Customer?.payid ?? DBNull.Value,
-                    Direction = ParameterDirection.Input
-                });
-
-                // 2️⃣ Output SaleID
-                var saleIdParam = new SqlParameter("@SaleID", SqlDbType.Int)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                cmd.Parameters.Add(saleIdParam);
-
-                // 3️⃣ TVP for SaleDetails
-                var tvp = new DataTable();
-                tvp.Columns.Add("ProductID", typeof(int));
-                tvp.Columns.Add("CreatedBy", typeof(int));
-                tvp.Columns.Add("ProductQuantity", typeof(decimal));
-
-                foreach (var detail in sale.SaleDetails)
-                {
-                    tvp.Rows.Add(detail.ProductID, sale.CreatedBy ?? (object)DBNull.Value, detail.productquantity);
+                    sale.customerID = Convert.ToInt32(await insertCustomerCmd.ExecuteScalarAsync());
                 }
 
-                var tvpParam = cmd.Parameters.AddWithValue("@SaleDetails", tvp);
-                tvpParam.SqlDbType = SqlDbType.Structured;
-                tvpParam.TypeName = "SaleDetailType";
+                // 2️⃣ Insert Sale
+                using var insertSaleCmd = connection.CreateCommand();
+                insertSaleCmd.Transaction = transaction;
+                insertSaleCmd.CommandText = @"
+            INSERT INTO Sale
+            (CustomerID, TotalItems, TotalAmount, TotalDiscount, OrderDate, CreatedBy, CreatedDate)
+            VALUES (@CustomerID, @TotalItems, @TotalAmount, @TotalDiscount, @OrderDate, @CreatedBy, @CreatedDate);
+            SELECT last_insert_rowid();";
 
-                var extracharges = new DataTable();
-                extracharges.Columns.Add("name", typeof(string));
-                extracharges.Columns.Add("charge_amt", typeof(decimal));
-                extracharges.Columns.Add("create_by", typeof(int));
-                extracharges.Columns.Add("saleid", typeof(int));
-                extracharges.Columns.Add("customerid", typeof(int));
+                insertSaleCmd.Parameters.AddWithValue("@CustomerID", sale.customerID);
+                insertSaleCmd.Parameters.AddWithValue("@TotalItems", sale.TotalItems);
+                insertSaleCmd.Parameters.AddWithValue("@TotalAmount", sale.TotalAmount);
+                insertSaleCmd.Parameters.AddWithValue("@TotalDiscount", sale.TotalDiscount);
+                insertSaleCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
+                insertSaleCmd.Parameters.AddWithValue("@CreatedDate", DateTime.Now);
+                insertSaleCmd.Parameters.AddWithValue("@OrderDate", DateTime.Now);
 
+                saleId = Convert.ToInt32(await insertSaleCmd.ExecuteScalarAsync());
+
+                // 3️⃣ Insert SaleDetails
+                foreach (var detail in sale.SaleDetails)
+                {
+                    using var insertDetailCmd = connection.CreateCommand();
+                    insertDetailCmd.Transaction = transaction;
+                    insertDetailCmd.CommandText = @"
+                INSERT INTO SaleDetail
+                (SaleID, ProductID, CreatedBy, CreatedDate, Quantity)
+                VALUES (@SaleID, @ProductID, @CreatedBy, @CreatedDate, @Quantity);";
+
+                    insertDetailCmd.Parameters.AddWithValue("@SaleID", saleId);
+                    insertDetailCmd.Parameters.AddWithValue("@ProductID", detail.ProductID);
+                    insertDetailCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
+                    insertDetailCmd.Parameters.AddWithValue("@Quantity", (object?)detail.productquantity ?? DBNull.Value);
+                    insertDetailCmd.Parameters.AddWithValue("@CreatedDate",DateTime.Now );
+
+                    await insertDetailCmd.ExecuteNonQueryAsync();
+                }
+
+                // 4️⃣ Insert ExtraCharges
                 if (sale.extracharges != null && sale.extracharges.Any())
                 {
                     foreach (var extra in sale.extracharges)
                     {
-                        extracharges.Rows.Add(
-                            extra.name ?? (object)DBNull.Value,
-                            extra.amount ?? (object)DBNull.Value,
-                            sale.CreatedBy ?? (object)DBNull.Value,
-                            (object)DBNull.Value, 
-                            (object)DBNull.Value  
-                        );
+                        using var insertExtraCmd = connection.CreateCommand();
+                        insertExtraCmd.Transaction = transaction;
+                        insertExtraCmd.CommandText = @"
+                    INSERT INTO extra_charges
+                    (name, charge_amt, create_by, saleid, customerid)
+                    VALUES (@Name, @ChargeAmt, @CreatedBy, @SaleID, @CustomerID);";
+
+                        insertExtraCmd.Parameters.AddWithValue("@Name", (object?)extra.name ?? DBNull.Value);
+                        insertExtraCmd.Parameters.AddWithValue("@ChargeAmt", (object?)extra.amount ?? DBNull.Value);
+                        insertExtraCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
+                        insertExtraCmd.Parameters.AddWithValue("@SaleID", saleId);
+                        insertExtraCmd.Parameters.AddWithValue("@CustomerID", sale.customerID);
+
+                        await insertExtraCmd.ExecuteNonQueryAsync();
                     }
                 }
 
-                // Add parameter to command
-                var extrachargesParams = cmd.Parameters.AddWithValue("@ExtraCharges", extracharges);
-                extrachargesParams.SqlDbType = SqlDbType.Structured;
-                extrachargesParams.TypeName = "ExtraChargesType";
+                // 5️⃣ Insert Customer Ledger
+                using var ledgerCmd = connection.CreateCommand();
+                ledgerCmd.Transaction = transaction;
+                ledgerCmd.CommandText = @"
+            INSERT INTO Customer_ledger
+            (customer_id, paid_amt, balance_due, total_amt, payment_mode, transaction_type, create_by, create_at, payid, transaction_type_id)
+            VALUES (@CustomerID, @PaidAmt, @BalanceDue, @TotalAmt, @PaymentMode, @TransactionType, @CreatedBy, @create_at, @PayID, @SaleID);";
 
+                ledgerCmd.Parameters.AddWithValue("@CustomerID", sale.customerID);
+                ledgerCmd.Parameters.AddWithValue("@PaidAmt", (object?)sale.Customer?.PaidAmt ?? DBNull.Value);
+                ledgerCmd.Parameters.AddWithValue("@BalanceDue", (object?)sale.Customer?.BalanceDue ?? DBNull.Value);
+                ledgerCmd.Parameters.AddWithValue("@TotalAmt", (object?)sale.Customer?.TotalAmt ?? DBNull.Value);
+                ledgerCmd.Parameters.AddWithValue("@PaymentMode", (object?)sale.Customer?.PaymentMode ?? DBNull.Value);
+                ledgerCmd.Parameters.AddWithValue("@TransactionType", (object?)sale.Customer?.TransactionType ?? DBNull.Value);
+                ledgerCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
+                ledgerCmd.Parameters.AddWithValue("@PayID", (object?)sale.Customer?.payid ?? DBNull.Value);
+                ledgerCmd.Parameters.AddWithValue("@SaleID", saleId);
+                ledgerCmd.Parameters.AddWithValue("@create_at", DateTime.Now);
 
-                // Execute
-                await cmd.ExecuteNonQueryAsync();
+                await ledgerCmd.ExecuteNonQueryAsync();
 
-                return (int)saleIdParam.Value;
+                // ✅ Commit transaction
+                transaction.Commit();
+
+                return saleId;
             }
-            catch (Exception ex)
+            catch
             {
-                // Log the error or rethrow
-                Console.WriteLine("Error inserting sale: " + ex.Message);
+                transaction.Rollback();
                 throw;
             }
             finally
             {
-                await sqlconnection.GetConnection().CloseAsync();
+                await connection.CloseAsync();
             }
         }
 
@@ -280,48 +268,82 @@ namespace FLEXIERP.DataAccessLayer
         public async Task<List<Sale_DTO>> GetSalesAsync(PaginationFilter pagination)
         {
             var salesList = new List<Sale_DTO>();
+            int offset = (pagination.PageNo - 1) * pagination.PageSize;
+
+            using var connection = sqlconnection.GetConnection();
+            await connection.OpenAsync();
 
             try
             {
-                using var connection = sqlconnection.GetConnection();
-                await connection.OpenAsync();
-
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "usp_GetSales";
-                cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.Add(new SqlParameter("@Page", SqlDbType.Int) { Value = pagination.PageNo });
-                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pagination.PageSize });
-                cmd.Parameters.Add(new SqlParameter("@Search", SqlDbType.NVarChar, 100) { Value = (object?)pagination.SearchTerm ?? DBNull.Value });
-                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.Date) { Value = pagination.StartDate });
-                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.Date) { Value = pagination.EndDate });
+                cmd.CommandText = @"
+            SELECT 
+    sale.SaleID,
+    cus.CustomerName,
+    sale.TotalItems,
+    sale.TotalAmount,
+    sale.TotalDiscount,
+    sale.OrderDate,
+    us.FullName,
+    IFNULL((
+        SELECT SUM(charges.charge_amt)
+        FROM extra_charges charges
+        WHERE charges.saleid = sale.SaleID
+    ), 0) AS TotalExtraCharges,
+    (
+        SELECT COUNT(*) 
+        FROM Sale s
+        LEFT JOIN Customer c ON s.CustomerID = c.CustomerID
+        LEFT JOIN Tbl_Users u ON s.CreatedBy = u.UserID
+        WHERE (@Search IS NULL 
+               OR c.CustomerName LIKE '%' || @Search || '%' 
+               OR u.FullName LIKE '%' || @Search || '%')
+          AND (@StartDate IS NULL OR DATE(s.OrderDate) >= DATE(@StartDate))
+          AND (@EndDate IS NULL OR DATE(s.OrderDate) <= DATE(@EndDate))
+    ) AS TotalRows
+FROM Sale sale
+LEFT JOIN Customer cus ON sale.CustomerID = cus.CustomerID
+LEFT JOIN Tbl_Users us ON sale.CreatedBy = us.UserID
+WHERE (@Search IS NULL 
+       OR cus.CustomerName LIKE '%' || @Search || '%' 
+       OR us.FullName LIKE '%' || @Search || '%')
+  AND (@StartDate IS NULL OR DATE(sale.OrderDate) >= DATE(@StartDate))
+  AND (@EndDate IS NULL OR DATE(sale.OrderDate) <= DATE(@EndDate))
+ORDER BY sale.OrderDate DESC
+LIMIT @PageSize OFFSET @Offset;
+
+        ";
+
+                cmd.Parameters.AddWithValue("@PageSize", pagination.PageSize);
+                cmd.Parameters.AddWithValue("@Offset", offset);
+                cmd.Parameters.AddWithValue("@Search", string.IsNullOrEmpty(pagination.SearchTerm) ? DBNull.Value : pagination.SearchTerm);
+                cmd.Parameters.AddWithValue("@StartDate", (object?)pagination.StartDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@EndDate", (object?)pagination.EndDate ?? DBNull.Value);
 
                 using var reader = await cmd.ExecuteReaderAsync();
+                int srNo = offset + 1;
+
                 while (await reader.ReadAsync())
                 {
                     salesList.Add(new Sale_DTO
                     {
-                        SrNo = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
-                        SaleID = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
-                        CustomerName = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
-                        TotalItems = !reader.IsDBNull(3) ? reader.GetInt32(3) : 0,
-                        TotalAmount = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0,
-                        TotalDiscount = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0,
-                        OrderDate = !reader.IsDBNull(6) ? reader.GetDateTime(6) : DateTime.MinValue,
-                        FullName = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
-                        TotalRows = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0,
-                        extracharges = !reader.IsDBNull(9) ? reader.GetDecimal(9) : 0
-
+                        SrNo = srNo++,
+                        SaleID = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        CustomerName = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        TotalItems = !reader.IsDBNull(2) ? reader.GetInt32(2) : 0,
+                        TotalAmount = !reader.IsDBNull(3) ? reader.GetDecimal(3) : 0,
+                        TotalDiscount = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0,
+                        OrderDate = !reader.IsDBNull(5) ? reader.GetDateTime(5) : DateTime.MinValue,
+                        FullName = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
+                        extracharges = !reader.IsDBNull(7) ? reader.GetDecimal(7) : 0,
+                        TotalRows = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0
                     });
                 }
             }
-            catch (SqlException ex)
-            {
-                throw new Exception("Failed to retrieve sales. Please try again later.", ex);
-            }
             finally
             {
-                await sqlconnection.GetConnection().CloseAsync();
+                await connection.CloseAsync();
             }
 
             return salesList;
@@ -340,15 +362,38 @@ namespace FLEXIERP.DataAccessLayer
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "usp_sale_old_Get_Customers";
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.Text;
 
-                cmd.Parameters.Add(new SqlParameter("@SearchTerm", SqlDbType.NVarChar, 100)
-                {
-                    Value = (object?)pagination.SearchTerm ?? DBNull.Value
-                });
-                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pagination.PageNo });
-                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pagination.PageSize });
+                int offset = (pagination.PageNo - 1) * pagination.PageSize;
+
+                cmd.CommandText = @"
+            WITH DistinctCustomers AS (
+                SELECT *
+                FROM Customer AS cs
+                WHERE (@SearchTerm IS NULL OR @SearchTerm = '' 
+                       OR cs.CustomerName LIKE '%' || @SearchTerm || '%'
+                       OR cs.PhoneNo LIKE '%' || @SearchTerm || '%'
+                       OR cs.Email LIKE '%' || @SearchTerm || '%'
+                       OR cs.Remark LIKE '%' || @SearchTerm || '%')
+                GROUP BY cs.PhoneNo
+                ORDER BY MAX(cs.CustomerID) DESC
+            )
+            SELECT 
+                (ROW_NUMBER() OVER (ORDER BY CustomerID DESC) + @Offset) AS SrNo,
+                CustomerID,
+                CustomerName,
+                PhoneNo,
+                Email,
+                Remark,
+                CustomerAddress,
+                (SELECT COUNT(*) FROM DistinctCustomers) AS TotalRecords
+            FROM DistinctCustomers
+            LIMIT @PageSize OFFSET @Offset;
+        ";
+
+                cmd.Parameters.AddWithValue("@SearchTerm", string.IsNullOrEmpty(pagination.SearchTerm) ? DBNull.Value : pagination.SearchTerm);
+                cmd.Parameters.AddWithValue("@PageSize", pagination.PageSize);
+                cmd.Parameters.AddWithValue("@Offset", offset);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -366,7 +411,7 @@ namespace FLEXIERP.DataAccessLayer
                     });
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 throw new Exception("Failed to retrieve old customers. Please try again later.", ex);
             }
@@ -381,55 +426,86 @@ namespace FLEXIERP.DataAccessLayer
         #endregion
 
         #region Get Customer with sales 
+
         public async Task<List<CustomerWithSalesDTO>> GetCustomersWithSalesAsync(PaginationFilter pagination)
         {
             var customers = new List<CustomerWithSalesDTO>();
 
             try
             {
-                using var connection = sqlconnection.GetConnection();
+                using var connection = sqlconnection.GetConnection(); // returns SqliteConnection
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "usp_Get_Customers_WithSales";
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = @"
+            WITH CustomerCTE AS (
+     SELECT 
+         cs.CustomerID,
+         cs.CustomerName,
+         cs.CustomerAddress,
+         cs.PhoneNo,
+         cs.Email,
+         cs.Remark,
+         cs.CreatedDate,
+         u.FullName,
+         ROW_NUMBER() OVER (ORDER BY cs.CustomerID DESC) AS RowNum,
+         COUNT(*) OVER() AS TotalRecords
+     FROM Customer cs
+     LEFT JOIN Tbl_Users u ON cs.CreatedBy = u.UserID
+     WHERE 
+         (@SearchTerm IS NULL OR @SearchTerm = '' 
+          OR cs.CustomerName LIKE '%' || @SearchTerm || '%'
+          OR cs.PhoneNo LIKE '%' || @SearchTerm || '%'
+          OR cs.Email LIKE '%' || @SearchTerm || '%'
+          OR cs.Remark LIKE '%' || @SearchTerm || '%')
+         AND (@StartDate IS NULL OR date(cs.CreatedDate) >= date(@StartDate))
+         AND (@EndDate IS NULL OR date(cs.CreatedDate) <= date(@EndDate))
+ )
+ SELECT 
+     RowNum AS SrNo,
+     CustomerID,
+     CustomerName,
+     CustomerAddress,
+     PhoneNo,
+     Email,
+     Remark,
+     CreatedDate,
+     FullName,
+     TotalRecords
+ FROM CustomerCTE
+ WHERE RowNum > ((@PageNo - 1) * @PageSize)
+   AND RowNum <= (@PageNo * @PageSize);
+        ";
 
-                cmd.Parameters.Add(new SqlParameter("@SearchTerm", SqlDbType.NVarChar, 100)
-                {
-                    Value = (object?)pagination.SearchTerm ?? DBNull.Value
-                });
-                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.Date) { Value = pagination.StartDate });
-                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.Date) { Value = pagination.EndDate});
-                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pagination.PageNo });
-                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pagination.PageSize });
+                // Add parameters safely
+                cmd.Parameters.AddWithValue("@SearchTerm", (object?)pagination.SearchTerm ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@StartDate", (object?)pagination.StartDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@EndDate", (object?)pagination.EndDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@PageNo", pagination.PageNo);
+                cmd.Parameters.AddWithValue("@PageSize", pagination.PageSize);
 
                 using var reader = await cmd.ExecuteReaderAsync();
+
                 while (await reader.ReadAsync())
                 {
                     customers.Add(new CustomerWithSalesDTO
                     {
-                        SrNo = !reader.IsDBNull(0) ? reader.GetInt64(0) : 0,
-                        CustomerID = !reader.IsDBNull(1) ? reader.GetInt32(1) : 0,
-                        CustomerName = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
-                        CustomerAddress = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
-                        PhoneNo = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
-                        Email = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
-                        TotalItems = !reader.IsDBNull(6) ? reader.GetDecimal(6) : 0,
-                        PaymentMode = !reader.IsDBNull(7) ? this.GetPaymentModeString(reader.GetInt32(7)) : string.Empty,
-                        Remark = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
-                        CreatedDate = !reader.IsDBNull(9) ? reader.GetDateTime(9) : DateTime.MinValue,
-                        FullName = !reader.IsDBNull(10) ? reader.GetString(10) : string.Empty,
-                        TotalRecords = !reader.IsDBNull(11) ? reader.GetInt32(11) : 0
+                        SrNo = reader.GetInt64(0),
+                        CustomerID = reader.GetInt32(1),
+                        CustomerName = reader.GetString(2),
+                        CustomerAddress = reader.GetString(3),
+                        PhoneNo = reader.GetString(4),
+                        Email = reader.GetString(5),
+                        Remark = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                        CreatedDate = reader.IsDBNull(7) ? DateTime.MinValue : reader.GetDateTime(7),
+                        FullName = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
+                        TotalRecords = reader.IsDBNull(9) ? 0 : reader.GetInt32(9)
                     });
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 throw new Exception("Failed to retrieve customers with sales. Please try again later.", ex);
-            }
-            finally
-            {
-                await sqlconnection.GetConnection().CloseAsync();
             }
 
             return customers;
@@ -440,77 +516,138 @@ namespace FLEXIERP.DataAccessLayer
         #region Sale Invoice
         public async Task<ReceiptDTO?> GetReceiptDetail(int saleId)
         {
-            ReceiptDTO? receipt = new ReceiptDTO();
+            using var connection = sqlconnection.GetConnection();
+            await connection.OpenAsync();
+
+
+            var receipt = new ReceiptDTO
+            {
+                CustomerInfo = new ReceiptCustomerDTO(),
+                SaleDetails = new List<ReceiptDetailDTO>(),
+                extracharges = new List<extrachargesDTO>()
+            };
 
             try
             {
-                using var connection = sqlconnection.GetConnection();
-                await connection.OpenAsync();
-
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "GetReceiptDetail";
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add(new SqlParameter("@SaleID", SqlDbType.Int) { Value = saleId });
-
-                using var reader = await cmd.ExecuteReaderAsync();
-
-                // First result set: Customer + Sale Info
-                if (await reader.ReadAsync())
+                // 1️⃣ Sale + Customer info
+                using (var cmd = connection.CreateCommand())
                 {
-                    receipt.CustomerInfo = new ReceiptCustomerDTO
+                    cmd.CommandText = @"
+                SELECT 
+                    cs.CustomerName,
+                    cs.PhoneNo,
+                    cs.Email,
+                    CASE cs.PaymentMode
+                        WHEN 1 THEN 'Cash'
+                        WHEN 2 THEN 'UPI'
+                        WHEN 3 THEN 'Card'
+                        ELSE 'Other'
+                    END AS PaymentMode,
+                    cs.Remark,
+                    sale.TotalItems,
+                    ROUND(sale.TotalAmount, 2) AS TotalAmount,
+                    ROUND(sale.TotalDiscount, 2) AS TotalDiscount,
+                    IFNULL(cl.paid_amt, 0) AS paid_amt,
+                    IFNULL(cl.Balance_Due, 0) AS Balance_Due
+                FROM Sale AS sale
+                LEFT JOIN Customer AS cs ON sale.CustomerID = cs.CustomerID
+                LEFT JOIN Customer_ledger AS cl 
+                    ON cs.CustomerID = cl.Customer_ID 
+                    AND sale.SaleID = cl.transaction_type_id
+                WHERE sale.SaleID = @SaleID
+                LIMIT 1;
+            ";
+
+                    cmd.Parameters.AddWithValue("@SaleID", saleId);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
                     {
-                        CustomerName = !reader.IsDBNull(0) ? reader.GetString(0) : string.Empty,
-                        PhoneNo = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
-                        Email = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
-                        PaymentMode = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
-                        Remark = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
-                        TotalItems = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0,
-                        TotalAmount = !reader.IsDBNull(6) ? reader.GetDecimal(6) : 0,
-                        TotalDiscount = !reader.IsDBNull(7) ? reader.GetDecimal(7) : 0,
-                        paidamt = !reader.IsDBNull(8) ? reader.GetDecimal(8) : 0,
-                        baldue = !reader.IsDBNull(9) ? reader.GetDecimal(9) : 0
-                    };
+                        receipt.CustomerInfo = new ReceiptCustomerDTO
+                        {
+                            CustomerName = reader["CustomerName"]?.ToString() ?? "",
+                            PhoneNo = reader["PhoneNo"]?.ToString() ?? "",
+                            Email = reader["Email"]?.ToString() ?? "",
+                            PaymentMode = reader["PaymentMode"]?.ToString() ?? "",
+                            Remark = reader["Remark"]?.ToString() ?? "",
+                            TotalItems = Convert.ToDecimal(reader["TotalItems"] ?? 0),
+                            TotalAmount = Convert.ToDecimal(reader["TotalAmount"] ?? 0),
+                            TotalDiscount = Convert.ToDecimal(reader["TotalDiscount"] ?? 0),
+                            paidamt = Convert.ToDecimal(reader["paid_amt"] ?? 0),
+                            baldue = Convert.ToDecimal(reader["Balance_Due"] ?? 0)
+                        };
+                    }
                 }
 
-                // Move to second result set
-                if (await reader.NextResultAsync())
+                // 2️⃣ Sale detail + Product info
+                using (var cmd = connection.CreateCommand())
                 {
+                    cmd.CommandText = @"
+                SELECT 
+                    pro.ProductName,
+                    detail.Quantity,
+                    ROUND(pro.SellingPrice, 2) AS Price,
+                    ROUND(detail.Quantity * IFNULL(pro.Discount, 0), 2) AS TotalDiscount,
+                    ROUND(detail.Quantity * IFNULL(pro.TaxRate, 0), 2) AS Tax,
+                    ROUND(detail.Quantity * IFNULL(pro.SellingPrice, 0), 2) AS TotalAmount
+                FROM SaleDetail AS detail
+                LEFT JOIN Product AS pro ON detail.ProductID = pro.ProductID
+                WHERE detail.SaleID = @SaleID;
+            ";
+
+                    cmd.Parameters.AddWithValue("@SaleID", saleId);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                     {
                         receipt.SaleDetails.Add(new ReceiptDetailDTO
                         {
-                            ProductName = !reader.IsDBNull(0) ? reader.GetString(0) : string.Empty,
-                            Quantity = !reader.IsDBNull(1) ? reader.GetDecimal(1) : 0,
-                            Price = !reader.IsDBNull(2) ? reader.GetDecimal(2) : 0,
-                            TotalDiscount = !reader.IsDBNull(3) ? reader.GetDecimal(3) : 0,
-                            Tax = !reader.IsDBNull(4) ? reader.GetDecimal(4) : 0,
-                            TotalAmount = !reader.IsDBNull(5) ? reader.GetDecimal(5) : 0
+                            ProductName = reader["ProductName"]?.ToString() ?? "",
+                            Quantity = Convert.ToDecimal(reader["Quantity"] ?? 0),
+                            Price = Convert.ToDecimal(reader["Price"] ?? 0),
+                            TotalDiscount = Convert.ToDecimal(reader["TotalDiscount"] ?? 0),
+                            Tax = Convert.ToDecimal(reader["Tax"] ?? 0),
+                            TotalAmount = Convert.ToDecimal(reader["TotalAmount"] ?? 0)
                         });
                     }
                 }
 
-                // Move to third result set
-                if (await reader.NextResultAsync())
+                // 3️⃣ Extra Charges
+                using (var cmd = connection.CreateCommand())
                 {
+                    cmd.CommandText = @"
+                SELECT 
+                    ec.name AS ChargeName,
+                    ROUND(ec.charge_amt, 2) AS ChargeAmount,
+                    u.FullName AS CreatedBy,
+                    strftime('%d-%m-%Y %H:%M', ec.create_at) AS CreatedDate
+                FROM extra_charges AS ec
+                LEFT JOIN Tbl_Users AS u ON ec.create_by = u.UserID
+                WHERE ec.saleid = @SaleID AND ec.status = 1;
+            ";
+
+                    cmd.Parameters.AddWithValue("@SaleID", saleId);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                     {
                         receipt.extracharges.Add(new extrachargesDTO
                         {
-                            chargename = !reader.IsDBNull(0) ? reader.GetString(0) : string.Empty,
-                            chargeamount = !reader.IsDBNull(1) ? reader.GetDecimal(1) : 0,
-                            createby = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
-                            createdate = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty
+                            chargename = reader["ChargeName"]?.ToString() ?? "",
+                            chargeamount = Convert.ToDecimal(reader["ChargeAmount"] ?? 0),
+                            createby = reader["CreatedBy"]?.ToString() ?? "",
+                            createdate = reader["CreatedDate"]?.ToString() ?? ""
                         });
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                throw new Exception("Failed to retrieve receipt details. Please try again later.", ex);
+                throw new Exception("Failed to retrieve receipt details (SQLite).", ex);
             }
             finally
             {
-                await sqlconnection.GetConnection().CloseAsync();
+                await connection.CloseAsync();
             }
 
             return receipt;

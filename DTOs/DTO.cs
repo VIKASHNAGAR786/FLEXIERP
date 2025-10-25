@@ -55,8 +55,6 @@
         public string CustomerAddress { get; set; } = string.Empty;
         public string PhoneNo { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public decimal TotalItems { get; set; }
-        public string PaymentMode { get; set; } = string.Empty;
         public string Remark { get; set; } = string.Empty;
         public DateTime CreatedDate { get; set; }
         public string FullName { get; set; } = string.Empty;

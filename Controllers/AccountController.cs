@@ -136,50 +136,65 @@ namespace FLEXIERP.Controllers
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterUser user)
         {
-            if (String.IsNullOrEmpty(user.FullName))
+            try
             {
-                return BadRequest(new { message = "Name needs to entered" });
-            }
-            else if (String.IsNullOrEmpty(user.Username))
-            {
-                return BadRequest(new { message = "User name needs to entered" });
-            }
-            else if (String.IsNullOrEmpty(user.PasswordHash))
-            {
-                return BadRequest(new { message = "Password needs to entered" });
-            }
+                // Input validation
+                if (string.IsNullOrEmpty(user.FullName))
+                    return BadRequest(new { message = "Name needs to be entered" });
 
-            // Fix for CS9035: Initialize all required members in the object initializer
-            User1 userToRegister = new User1
-            {
-                FullName = user.FullName,
-                Username = user.Username,
-                Email = user.Email,
-                PasswordHash = user.PasswordHash,
-                MobileNo = user.MobileNo,
-                Gender = user.Gender,
-                DateOfBirth = user.DateOfBirth,
-                Address = user.Address,
-                City = user.City,
-                State = user.State,
-                Country = user.Country,
-                ProfileImageUrl = user.ProfileImageUrl,
-                RoleID = user.RoleID,
-                LastLoginAt = DateTime.UtcNow,
-                IsActive = true,
-                IsEmailVerified = false
-            };
+                if (string.IsNullOrEmpty(user.Username))
+                    return BadRequest(new { message = "Username needs to be entered" });
 
-            User1 registeredUser = await accouuntservice.Register(userToRegister);
+                if (string.IsNullOrEmpty(user.PasswordHash))
+                    return BadRequest(new { message = "Password needs to be entered" });
 
-            User1? loggedInUser = await accouuntservice.Login(registeredUser.Email,registeredUser.Username, user.PasswordHash);
+                // Prepare user object for registration
+                User1 userToRegister = new User1
+                {
+                    FullName = user.FullName,
+                    Username = user.Username,
+                    Email = user.Email,
+                    PasswordHash = user.PasswordHash,
+                    MobileNo = user.MobileNo,
+                    Gender = user.Gender,
+                    DateOfBirth = user.DateOfBirth,
+                    Address = user.Address,
+                    City = user.City,
+                    State = user.State,
+                    Country = user.Country,
+                    ProfileImageUrl = user.ProfileImageUrl,
+                    RoleID = user.RoleID,
+                    LastLoginAt = DateTime.UtcNow,
+                    IsActive = true,
+                    IsEmailVerified = false
+                };
 
-            if (loggedInUser != null)
-            {
-                return Ok(loggedInUser);
+                // Register the user
+                User1 registeredUser = await accouuntservice.Register(userToRegister);
+
+                // Automatically log in after registration
+                User1? loggedInUser = await accouuntservice.Login(
+                    registeredUser.Email,
+                    registeredUser.Username,
+                    user.PasswordHash
+                );
+
+                if (loggedInUser != null)
+                    return Ok(loggedInUser);
+
+                return BadRequest(new { message = "User registration unsuccessful" });
             }
-            return BadRequest(new { message = "User registration unsuccessful" });
+            catch (Exception ex)
+            {
+                // Return safe error message to client
+                return StatusCode(500, new
+                {
+                    message = "An unexpected error occurred while registering the user.",
+                    detail = ex.Message
+                });
+            }
         }
+
         #endregion
 
         #region Company Info

@@ -81,11 +81,11 @@ namespace FLEXIERP.BusinessLayer
         {
             return await _saleRepo.GetSalesAsync(pagination);
         }
-        public async Task<byte[]> GetSalesReportPdf(PaginationFilter filter)
+        public async Task<byte[]> GetSalesReportPdf(PaginationFilter filter, int userid)
         {
             // Dummy data
             List<Sale_DTO> saledata = await _saleRepo.GetSalesAsync(filter);
-            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
+            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(userid);
 
             // Build HTML
             var html = $@"
@@ -175,11 +175,11 @@ namespace FLEXIERP.BusinessLayer
             return stream.ToArray();
         }
 
-        public async Task<byte[]> GetSalesReportExcel(PaginationFilter filter)
+        public async Task<byte[]> GetSalesReportExcel(PaginationFilter filter, int userid)
         {
             // Get product data
             IEnumerable<Sale_DTO> products = await _saleRepo.GetSalesAsync(filter);
-            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
+            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(userid);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Sold Product Report");

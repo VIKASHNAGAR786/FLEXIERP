@@ -12,11 +12,11 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         #region Save prodcut
         public Task<string> AddProduct(ProductModel product);
         public Task<IEnumerable<Product_DTO>> GetProducts(PaginationFilter filter);
-        public Task<byte[]> GetProductReportPdf(PaginationFilter filter);
-        public Task<byte[]> GetProductReportExcel(PaginationFilter filter);
+        public Task<byte[]> GetProductReportPdf(PaginationFilter filter, int userid);
+        public Task<byte[]> GetProductReportExcel(PaginationFilter filter, int userid);
         public Task<IEnumerable<Product_DTO>> GetSoldProductsList(PaginationFilter filter);
-        public Task<byte[]> GetSoldProductReportPdf(PaginationFilter filter);
-        public Task<byte[]> GetSoldProductReportExcel(PaginationFilter filter);
+        public Task<byte[]> GetSoldProductReportPdf(PaginationFilter filter, int userid);
+        public Task<byte[]> GetSoldProductReportExcel(PaginationFilter filter, int userid);
         #endregion
 
 

@@ -183,12 +183,24 @@ namespace FLEXIERP.MODELS
 
     public class PaginationFilter
     {
-        public string StartDate { get; set; } = DateTime.UtcNow.ToString();
-        public string EndDate { get; set; } = DateTime.UtcNow.ToString();
+        private static readonly TimeZoneInfo IndiaTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+
+        public string StartDate { get; set; } =
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone)
+                         .ToString("yyyy-MM-dd HH:mm:ss");
+
+        public string EndDate { get; set; } =
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone)
+                         .ToString("yyyy-MM-dd HH:mm:ss");
+
         public string? SearchTerm { get; set; }
+
         public int PageNo { get; set; } = 1;
+
         public int PageSize { get; set; } = 10;
     }
+
 
     public class WarehouseModel
     {

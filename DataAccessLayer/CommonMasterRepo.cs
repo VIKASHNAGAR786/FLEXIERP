@@ -4,6 +4,7 @@ using FLEXIERP.DATABASE;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using System.Data;
 using System.Security.Claims;
 
@@ -27,116 +28,87 @@ namespace FLEXIERP.DataAccessLayer
         #region payment methods
         public async Task<int> SaveChequePaymentAsync(SaveChequePaymentDto chequePayment)
         {
+            int insertedId = 0;
+
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
             try
             {
-                using (var connection = sqlConnection.GetConnection())
-                {
-                    await connection.OpenAsync();
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
+            INSERT INTO ChequePayments
+            (chequenumber, bankname, branchname, chequedate, amount, ifsc_code, create_by)
+            VALUES (@chequenumber, @bankname, @branchname, @chequedate, @amount, @ifsc_code, @create_by);
+            SELECT last_insert_rowid();";
 
-                    using (var cmd = connection.CreateCommand())
-                    {
-                        cmd.CommandText = "SaveChequePayment";
-                        cmd.CommandType = CommandType.StoredProcedure;
+                // Parameters
+                cmd.Parameters.AddWithValue("@chequenumber", (object?)chequePayment.ChequeNumber ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@bankname", (object?)chequePayment.BankName ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@branchname", (object?)chequePayment.BranchName ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@chequedate", (object?)chequePayment.ChequeDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@amount", chequePayment.Amount);
+                cmd.Parameters.AddWithValue("@ifsc_code", (object?)chequePayment.IFSC_Code ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@create_by", chequePayment.CreatedBy);
 
-                        // Parameters
-                        cmd.Parameters.Add(new SqlParameter("@chequenumber", SqlDbType.NVarChar)
-                        {
-                            Value = string.IsNullOrEmpty(chequePayment.ChequeNumber) ? DBNull.Value : chequePayment.ChequeNumber
-                        });
+                // Execute and get the inserted ID
+                var result = await cmd.ExecuteScalarAsync();
+                insertedId = result != null ? Convert.ToInt32(result) : 0;
 
-                        cmd.Parameters.Add(new SqlParameter("@bankname", SqlDbType.NVarChar)
-                        {
-                            Value = string.IsNullOrEmpty(chequePayment.BankName) ? DBNull.Value : chequePayment.BankName
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@branchname", SqlDbType.NVarChar)
-                        {
-                            Value = string.IsNullOrEmpty(chequePayment.BranchName) ? DBNull.Value : chequePayment.BranchName
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@chequedate", SqlDbType.Date)
-                        {
-                            Value = chequePayment.ChequeDate == null ? DBNull.Value : chequePayment.ChequeDate
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@amount", SqlDbType.Decimal)
-                        {
-                            Value = chequePayment.Amount
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@ifsc_code", SqlDbType.NVarChar)
-                        {
-                            Value = string.IsNullOrEmpty(chequePayment.IFSC_Code) ? DBNull.Value : chequePayment.IFSC_Code
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@create_by", SqlDbType.Int)
-                        {
-                            Value = chequePayment.CreatedBy
-                        });
-
-                        // Execute stored procedure and get inserted ID
-                        var insertedIdObj = await cmd.ExecuteScalarAsync();
-
-                        int insertedId = insertedIdObj != null ? Convert.ToInt32(insertedIdObj) : 0;
-
-                        return insertedId;
-                    }
-                }
+                transaction.Commit();
+                return insertedId;
             }
-            catch (SqlException ex)
+            catch
             {
-                throw new Exception("Error while saving cheque payment.", ex);
+                transaction.Rollback();
+                throw;
             }
             finally
             {
-                await sqlConnection.GetConnection().CloseAsync();
+                await connection.CloseAsync();
             }
         }
 
         public async Task<int> SaveCashPaymentAsync(SaveCashPaymentDto cashPayment)
         {
+            int insertedId = 0;
+
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
             try
             {
-                using (var connection = sqlConnection.GetConnection())
-                {
-                    await connection.OpenAsync();
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
+            INSERT INTO CashPayments
+            (amount, payment_date, create_by)
+            VALUES (@amount, COALESCE(@payment_date, DATE('now')), @create_by);
+            SELECT last_insert_rowid();";
 
-                    using (var cmd = connection.CreateCommand())
-                    {
-                        cmd.CommandText = "SaveCashPayment";
-                        cmd.CommandType = CommandType.StoredProcedure;
+                // Parameters
+                cmd.Parameters.AddWithValue("@amount", cashPayment.Amount);
+                cmd.Parameters.AddWithValue("@payment_date", (object?)cashPayment.PaymentDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@create_by", cashPayment.CreatedBy);
 
-                        // Parameters
-                        cmd.Parameters.Add(new SqlParameter("@amount", SqlDbType.Decimal)
-                        {
-                            Value = cashPayment.Amount
-                        });
+                // Execute and get the inserted ID
+                var result = await cmd.ExecuteScalarAsync();
+                insertedId = result != null ? Convert.ToInt32(result) : 0;
 
-                        cmd.Parameters.Add(new SqlParameter("@payment_date", SqlDbType.Date)
-                        {
-                            Value = cashPayment.PaymentDate == null ? DBNull.Value : cashPayment.PaymentDate
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@create_by", SqlDbType.Int)
-                        {
-                            Value = cashPayment.CreatedBy
-                        });
-
-                        // Execute SP and get inserted ID
-                        var insertedIdObj = await cmd.ExecuteScalarAsync();
-                        int insertedId = insertedIdObj != null ? Convert.ToInt32(insertedIdObj) : 0;
-
-                        return insertedId;
-                    }
-                }
+                transaction.Commit();
+                return insertedId;
             }
-            catch (SqlException ex)
+            catch
             {
-                throw new Exception("Error while saving cash payment.", ex);
+                transaction.Rollback();
+                throw;
             }
             finally
             {
-                await sqlConnection.GetConnection().CloseAsync();
+                await connection.CloseAsync();
             }
         }
 
@@ -152,12 +124,102 @@ namespace FLEXIERP.DataAccessLayer
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "GetDashboardMetrics";
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = @$"
+                                                -- Parameters: @StartDate, @EndDate, @PageSize
+                                                -- If dates are NULL, use last 7 days
+                                                -- Replace parameters in C# using cmd.Parameters.AddWithValue
 
-                cmd.Parameters.Add(new SqlParameter("@StartDate", SqlDbType.VarChar) { Value = startDate });
-                cmd.Parameters.Add(new SqlParameter("@EndDate", SqlDbType.VarChar) { Value = endDate });
-                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = 50 }); // optional page size
+                                                -- Set default dates in C# if not provided:
+                                                -- startDate = startDate ?? DateTime.UtcNow.AddDays(-7);
+                                                -- endDate = endDate ?? DateTime.UtcNow;
+
+                                                -------------------------
+                                                -- 1. Dashboard Metrics
+                                                -------------------------
+
+                                                SELECT 
+                                                    COALESCE((SELECT SUM(amount) FROM CashPayments 
+                                                              WHERE payment_date >= @StartDate 
+                                                                AND payment_date < date(@EndDate, '+1 day')), 0) AS TotalCashReceived,
+
+                                                    COALESCE((SELECT SUM(amount) FROM ChequePayments 
+                                                              WHERE chequedate >= @StartDate 
+                                                                AND chequedate < date(@EndDate, '+1 day')), 0) AS TotalChequeReceived,
+
+                                                    CASE 
+                                                        WHEN (SELECT SUM(amount) FROM CashPayments 
+                                                              WHERE payment_date >= date(@StartDate, '-1 month') 
+                                                                AND payment_date < date(@EndDate, '-1 month', '+1 day')) = 0 
+                                                        THEN NULL
+                                                        ELSE ROUND(
+                                                            ((COALESCE((SELECT SUM(amount) FROM CashPayments 
+                                                                        WHERE payment_date >= @StartDate 
+                                                                          AND payment_date < date(@EndDate, '+1 day')), 0) -
+                                                              COALESCE((SELECT SUM(amount) FROM CashPayments 
+                                                                        WHERE payment_date >= date(@StartDate, '-1 month') 
+                                                                          AND payment_date < date(@EndDate, '-1 month', '+1 day')), 0)) 
+                                                             / COALESCE((SELECT SUM(amount) FROM CashPayments 
+                                                                         WHERE payment_date >= date(@StartDate, '-1 month') 
+                                                                           AND payment_date < date(@EndDate, '-1 month', '+1 day')), 1)) * 100, 2)
+                                                    END AS CashGrowthPercent,
+
+                                                    CASE 
+                                                        WHEN (SELECT SUM(amount) FROM ChequePayments 
+                                                              WHERE chequedate >= date(@StartDate, '-1 month') 
+                                                                AND chequedate < date(@EndDate, '-1 month', '+1 day')) = 0 
+                                                        THEN NULL
+                                                        ELSE ROUND(
+                                                            ((COALESCE((SELECT SUM(amount) FROM ChequePayments 
+                                                                        WHERE chequedate >= @StartDate 
+                                                                          AND chequedate < date(@EndDate, '+1 day')), 0) -
+                                                              COALESCE((SELECT SUM(amount) FROM ChequePayments 
+                                                                        WHERE chequedate >= date(@StartDate, '-1 month') 
+                                                                          AND chequedate < date(@EndDate, '-1 month', '+1 day')), 0)) 
+                                                             / COALESCE((SELECT SUM(amount) FROM ChequePayments 
+                                                                         WHERE chequedate >= date(@StartDate, '-1 month') 
+                                                                           AND chequedate < date(@EndDate, '-1 month', '+1 day')), 1)) * 100, 2)
+                                                    END AS ChequeGrowthPercent,
+
+                                                    COALESCE((SELECT SUM(balance_due) FROM Customer_Ledger 
+                                                              WHERE create_at >= @StartDate 
+                                                                AND create_at < date(@EndDate, '+1 day')), 0) AS TotalBalanceDue;
+
+                                                -------------------------
+                                                -- 2. Recent Transactions
+                                                -------------------------
+
+                                                SELECT
+                                                    strftime('%d-%b-%Y', cl.create_at) AS Date,
+                                                    strftime('%I:%M %p', cl.create_at) AS Time,
+                                                    cs.CustomerName,
+                                                    CASE 
+                                                        WHEN cl.payment_mode = 1 THEN cash.amount
+                                                        WHEN cl.payment_mode = 2 THEN cheque.amount
+                                                        ELSE 0
+                                                    END AS ReceivedAmount,
+                                                    cl.balance_due,
+                                                    cl.total_amt,
+                                                    CASE 
+                                                        WHEN cl.payment_mode = 1 THEN 'Cash'
+                                                        WHEN cl.payment_mode = 2 THEN 'Cheque'
+                                                        ELSE 'Unknown'
+                                                    END AS PaymentType,
+                                                    cl.transaction_type
+                                                FROM Customer_Ledger cl
+                                                LEFT JOIN Customer cs ON cl.customer_id = cs.CustomerID
+                                                LEFT JOIN CashPayments cash ON cl.payid = cash.id AND cl.payment_mode = 1
+                                                LEFT JOIN ChequePayments cheque ON cl.payid = cheque.id AND cl.payment_mode = 2
+                                                WHERE cl.create_at >= @StartDate
+                                                  AND cl.create_at < date(@EndDate, '+1 day')
+                                                ORDER BY cl.create_at DESC
+                                                LIMIT @PageSize;
+
+";
+                cmd.CommandType = CommandType.Text;
+
+                cmd.Parameters.Add(new SqliteParameter("@StartDate", SqlDbType.VarChar) { Value = startDate });
+                cmd.Parameters.Add(new SqliteParameter("@EndDate", SqlDbType.VarChar) { Value = endDate });
+                cmd.Parameters.Add(new SqliteParameter("@PageSize", SqlDbType.Int) { Value = 50 }); // optional page size
 
                 using var reader = await cmd.ExecuteReaderAsync();
 
@@ -222,74 +284,39 @@ namespace FLEXIERP.DataAccessLayer
                     userId = parsedId;
                 }
 
-                using (var connection = sqlConnection.GetConnection())
+                using (var connection = sqlConnection.GetConnection()) // SQLiteConnection
                 {
                     await connection.OpenAsync();
 
+                    string sql = @"INSERT INTO UserErrorLog
+                (userid, module, actiontype, errormessage, errorcode, stacktrace, apiname, CreatedAt, Severity, AdditionalInfo)
+                VALUES
+                (@UserId, @Module, @ActionType, @ErrorMessage, @ErrorCode, @StackTrace, @ApiName, @CreatedAt, @Severity, @AdditionalInfo);";
+
                     using (var cmd = connection.CreateCommand())
                     {
-                        cmd.CommandText = "InsertUserErrorLog";
-                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.CommandText = sql;
+                        cmd.CommandType = CommandType.Text; // Not StoredProcedure
 
                         // Parameters
-                        cmd.Parameters.Add(new SqlParameter("@UserId", SqlDbType.Int)
-                        {
-                            Value = userId
-                        });
+                        cmd.Parameters.AddWithValue("@UserId", userId ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@Module", string.IsNullOrEmpty(errorLog.Module) ? DBNull.Value : errorLog.Module);
+                        cmd.Parameters.AddWithValue("@ActionType", string.IsNullOrEmpty(errorLog.ActionType) ? DBNull.Value : errorLog.ActionType);
+                        cmd.Parameters.AddWithValue("@ErrorMessage", errorLog.ErrorMessage ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@ErrorCode", string.IsNullOrEmpty(errorLog.ErrorCode) ? DBNull.Value : errorLog.ErrorCode);
+                        cmd.Parameters.AddWithValue("@StackTrace", string.IsNullOrEmpty(errorLog.StackTrace) ? DBNull.Value : errorLog.StackTrace);
+                        cmd.Parameters.AddWithValue("@ApiName", string.IsNullOrEmpty(errorLog.ApiName) ? DBNull.Value : errorLog.ApiName);
+                        cmd.Parameters.AddWithValue("@Severity", string.IsNullOrEmpty(errorLog.Severity) ? "ERROR" : errorLog.Severity);
+                        cmd.Parameters.AddWithValue("@AdditionalInfo", string.IsNullOrEmpty(errorLog.AdditionalInfo) ? DBNull.Value : errorLog.AdditionalInfo);
+                        cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
 
-                        cmd.Parameters.Add(new SqlParameter("@Module", SqlDbType.VarChar, 100)
-                        {
-                            Value = string.IsNullOrEmpty(errorLog.Module) ? DBNull.Value : errorLog.Module
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@ActionType", SqlDbType.VarChar, 100)
-                        {
-                            Value = string.IsNullOrEmpty(errorLog.ActionType) ? DBNull.Value : errorLog.ActionType
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@ErrorMessage", SqlDbType.NVarChar)
-                        {
-                            Value = errorLog.ErrorMessage ?? (object)DBNull.Value
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@ErrorCode", SqlDbType.VarChar, 50)
-                        {
-                            Value = string.IsNullOrEmpty(errorLog.ErrorCode) ? DBNull.Value : errorLog.ErrorCode
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@StackTrace", SqlDbType.NVarChar)
-                        {
-                            Value = string.IsNullOrEmpty(errorLog.StackTrace) ? DBNull.Value : errorLog.StackTrace
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@ApiName", SqlDbType.VarChar, 200)
-                        {
-                            Value = string.IsNullOrEmpty(errorLog.ApiName) ? DBNull.Value : errorLog.ApiName
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@Severity", SqlDbType.VarChar, 20)
-                        {
-                            Value = string.IsNullOrEmpty(errorLog.Severity) ? "ERROR" : errorLog.Severity
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@AdditionalInfo", SqlDbType.NVarChar)
-                        {
-                            Value = string.IsNullOrEmpty(errorLog.AdditionalInfo) ? DBNull.Value : errorLog.AdditionalInfo
-                        });
-
-                        cmd.Parameters.Add(new SqlParameter("@CreatedAt", SqlDbType.DateTime)
-                        {
-                            Value = DateTime.Now
-                        });
-
-
-                        // Execute SP and return affected rows (should be 1 if success)
+                        // Execute and return affected rows
                         int rowsAffected = await cmd.ExecuteNonQueryAsync();
                         return rowsAffected;
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
                 throw new Exception("Error while saving user error log.", ex);
             }
@@ -305,53 +332,93 @@ namespace FLEXIERP.DataAccessLayer
         public async Task<List<ReceivedChequeDto>> GetReceivedChequesAsync(PaginationFilter pagination)
         {
             var cheques = new List<ReceivedChequeDto>();
+            string query = @"
+        WITH ChequeCTE AS (
+            SELECT 
+                cs.CustomerName,
+                cs.CustomerAddress, 
+                cs.PhoneNo,
+                cheque.chequenumber,
+                cheque.bankname,
+                cheque.branchname,
+                cheque.chequedate,
+                cheque.amount,
+                cheque.ifsc_code,
+                cheque.createat,
+                userdata.FullName,
+                ROW_NUMBER() OVER (ORDER BY cheque.createat DESC) AS RowNum
+            FROM Customer_Ledger AS cl
+            LEFT JOIN Customer AS cs ON cl.customer_id = cs.CustomerID
+            LEFT JOIN ChequePayments AS cheque ON cl.payid = cheque.id AND cl.payment_mode = 2
+            LEFT JOIN Tbl_Users AS userdata ON cl.create_by = userdata.UserID
+            WHERE cl.payment_mode = 2
+              AND (
+                    @SearchText = '' OR
+                    cs.CustomerName LIKE '%' || @SearchText || '%' OR
+                    cheque.chequenumber LIKE '%' || @SearchText || '%' OR
+                    cheque.bankname LIKE '%' || @SearchText || '%' OR
+                    cheque.branchname LIKE '%' || @SearchText || '%' OR
+                    userdata.FullName LIKE '%' || @SearchText || '%'
+                  )
+        )
+        SELECT 
+            ((@PageNo - 1) * @PageSize) + ROW_NUMBER() OVER (ORDER BY RowNum DESC) AS SrNo,
+            CustomerName,
+            CustomerAddress,
+            PhoneNo,
+            chequenumber,
+            bankname,
+            branchname,
+            STRFTIME('%d/%m/%Y, %I:%M %p', chequedate) AS ChequeDate,
+            amount AS Amount,
+            ifsc_code AS IFSC_Code,
+            STRFTIME('%d/%m/%Y, %I:%M %p', createat) AS CreatedAt,
+            FullName,
+            (SELECT COUNT(*) FROM ChequeCTE) AS TotalRecords
+        FROM ChequeCTE
+        WHERE RowNum BETWEEN ((@PageNo - 1) * @PageSize + 1) AND (@PageNo * @PageSize)
+        ORDER BY RowNum DESC;
+    ";
 
             try
             {
-                using var connection = sqlConnection.GetConnection();
+                using var connection = sqlConnection.GetConnection(); // returns SqliteConnection
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "sp_GetReceivedCheques";
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = query;
+                cmd.CommandType = CommandType.Text;
 
-                cmd.Parameters.Add(new SqlParameter("@PageNo", SqlDbType.Int) { Value = pagination.PageNo });
-                cmd.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pagination.PageSize });
-                cmd.Parameters.Add(new SqlParameter("@SearchText", SqlDbType.NVarChar, 100) { Value = pagination.SearchTerm ?? string.Empty });
+                cmd.Parameters.AddWithValue("@PageNo", pagination.PageNo);
+                cmd.Parameters.AddWithValue("@PageSize", pagination.PageSize);
+                cmd.Parameters.AddWithValue("@SearchText", pagination.SearchTerm ?? string.Empty);
 
                 using var reader = await cmd.ExecuteReaderAsync();
-
                 while (await reader.ReadAsync())
                 {
-                    var cheque = new ReceivedChequeDto
+                    cheques.Add(new ReceivedChequeDto
                     {
-                        SrNo = !reader.IsDBNull(0) ? reader.GetInt64(0) : 0,
-                        CustomerName = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
-                        CustomerAddress = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
-                        PhoneNo = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
-                        ChequeNumber = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
-                        BankName = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty,
-                        BranchName = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
-                        ChequeDate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
-                        Amount = !reader.IsDBNull(8) ? reader.GetDecimal(8) : 0,
-                        ifsc_Code = !reader.IsDBNull(9) ? reader.GetString(9) : string.Empty,
-                        CreatedAt = !reader.IsDBNull(10) ? reader.GetString(10) : string.Empty,
-                        FullName = !reader.IsDBNull(11) ? reader.GetString(11) : string.Empty,
-                        TotalRecords = !reader.IsDBNull(12) ? reader.GetInt32(12) : 0
-                    };
-
-                    cheques.Add(cheque);
+                        SrNo = reader["SrNo"] != DBNull.Value ? Convert.ToInt64(reader["SrNo"]) : 0,
+                        CustomerName = reader["CustomerName"]?.ToString() ?? string.Empty,
+                        CustomerAddress = reader["CustomerAddress"]?.ToString() ?? string.Empty,
+                        PhoneNo = reader["PhoneNo"]?.ToString() ?? string.Empty,
+                        ChequeNumber = reader["chequenumber"]?.ToString() ?? string.Empty,
+                        BankName = reader["bankname"]?.ToString() ?? string.Empty,
+                        BranchName = reader["branchname"]?.ToString() ?? string.Empty,
+                        ChequeDate = reader["ChequeDate"]?.ToString() ?? string.Empty,
+                        Amount = reader["Amount"] != DBNull.Value ? Convert.ToDecimal(reader["Amount"]) : 0,
+                        ifsc_Code = reader["IFSC_Code"]?.ToString() ?? string.Empty,
+                        CreatedAt = reader["CreatedAt"]?.ToString() ?? string.Empty,
+                        FullName = reader["FullName"]?.ToString() ?? string.Empty,
+                        TotalRecords = reader["TotalRecords"] != DBNull.Value ? Convert.ToInt32(reader["TotalRecords"]) : 0
+                    });
                 }
 
                 return cheques;
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                throw new Exception("Failed to retrieve received cheques. Please try again later.", ex);
-            }
-            finally
-            {
-                await sqlConnection.GetConnection().CloseAsync();
+                throw new Exception("Failed to retrieve received cheques from SQLite. Please try again later.", ex);
             }
         }
 

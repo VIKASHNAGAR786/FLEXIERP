@@ -42,11 +42,11 @@ namespace FLEXIERP.BusinessLayer
             return await inventoryRepo.GetProducts(filter);
         }
 
-        public async Task<byte[]> GetProductReportPdf(PaginationFilter filter)
+        public async Task<byte[]> GetProductReportPdf(PaginationFilter filter, int userid)
         {
             // Dummy data
             IEnumerable<Product_DTO> products = await inventoryRepo.GetProducts(filter);
-            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
+            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(userid);
 
             // Build HTML
             var html = $@"
@@ -160,11 +160,11 @@ namespace FLEXIERP.BusinessLayer
             return stream.ToArray();
         }
 
-        public async Task<byte[]> GetProductReportExcel(PaginationFilter filter)
+        public async Task<byte[]> GetProductReportExcel(PaginationFilter filter, int userid)
         {
             // Get product data
             IEnumerable<Product_DTO> products = await inventoryRepo.GetProducts(filter);
-            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
+            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(userid);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Product Report");
@@ -271,11 +271,11 @@ namespace FLEXIERP.BusinessLayer
         {
             return await inventoryRepo.GetSoldProductsList(filter);
         }
-        public async Task<byte[]> GetSoldProductReportPdf(PaginationFilter filter)
+        public async Task<byte[]> GetSoldProductReportPdf(PaginationFilter filter, int userid)
         {
             // Dummy data
             IEnumerable<Product_DTO> products = await inventoryRepo.GetSoldProductsList(filter);
-            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
+            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(userid);
             // Build HTML
             var html = $@"
 <html>
@@ -387,11 +387,11 @@ namespace FLEXIERP.BusinessLayer
             return stream.ToArray();
         }
 
-        public async Task<byte[]> GetSoldProductReportExcel(PaginationFilter filter)
+        public async Task<byte[]> GetSoldProductReportExcel(PaginationFilter filter, int userid)
         {
             // Get product data
             IEnumerable<Product_DTO> products = await inventoryRepo.GetSoldProductsList(filter);
-            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(2);
+            CompanyInfoDto? company = await this.accountRepo.GetCompanyInfoByUserAsync(userid);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Sold Product Report");
