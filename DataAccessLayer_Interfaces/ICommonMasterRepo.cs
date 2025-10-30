@@ -13,5 +13,11 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         #region cheque details 
         public Task<List<ReceivedChequeDto>> GetReceivedChequesAsync(PaginationFilter pagination);
         #endregion
+
+        #region notes
+        public Task<int> SaveNoteAsync(SaveNotes note);
+        public Task<List<NoteDto>> GetAllNotesAsync();
+        public Task<NoteDetailsDto> GetNoteDetailsByIdAsync(int rowid);
+        #endregion
     }
 }

@@ -249,5 +249,20 @@ namespace FLEXIERP.BusinessLayer
         }
         #endregion
 
+        #region notes
+        public async Task<int> SaveNoteAsync(SaveNotes note)
+        {
+            return await this.commonmaster.SaveNoteAsync(note);
+        }
+        public async Task<List<NoteDto>> GetAllNotesAsync()
+        {
+            return await this.commonmaster.GetAllNotesAsync();
+        }
+        public async Task<NoteDetailsDto> GetNoteDetailsByIdAsync(int rowid)
+        {
+            return await this.commonmaster.GetNoteDetailsByIdAsync(rowid);
+        }
+        #endregion
+
     }
 }

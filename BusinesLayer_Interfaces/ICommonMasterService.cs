@@ -10,5 +10,11 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<byte[]> GenerateDashboardExcel(string startDate, string endDate);
         public Task<List<ReceivedChequeDto>> GetReceivedChequesAsync(PaginationFilter pagination);
 
+        #region notes
+        public Task<int> SaveNoteAsync(SaveNotes note);
+        public Task<List<NoteDto>> GetAllNotesAsync();
+        public Task<NoteDetailsDto> GetNoteDetailsByIdAsync(int rowid);
+        #endregion
+
     }
 }

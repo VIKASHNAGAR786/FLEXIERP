@@ -213,5 +213,32 @@
         public int TotalRecords { get; set; }
     }
 
+    public class NoteDto
+    {
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public string Content { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public string AuthorId { get; set; }
+        public bool IsPinned { get; set; }
+        public bool IsArchived { get; set; }
+        public string CreatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
+        public bool Status { get; set; }
+    }
 
+    public class NoteDetailsDto
+    {
+        public string title { get; set; }
+        public string content { get; set; }
+        public string createdat { get; set; }       // AM/PM formatted string
+        public string? updatedat { get; set; }      // optional
+        public string authorname { get; set; }
+        public bool ispinned { get; set; }
+        public bool isarchived { get; set; }
+        public string createdbyname { get; set; }
+        public string updatedbyname { get; set; }
+        public bool status { get; set; }
+    }
 }

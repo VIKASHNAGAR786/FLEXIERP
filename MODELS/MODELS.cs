@@ -1,7 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
 
 namespace FLEXIERP.MODELS
 {
+    public class BackupRequest
+    {
+        public required string BackupFolderPath { get; set; }
+    }
     public class User1
     {
         public required string FullName { get; set; }
@@ -16,7 +21,7 @@ namespace FLEXIERP.MODELS
         public string? State { get; set; }
         public string? Country { get; set; }
         public string? ProfileImageUrl { get; set; }
-        public int RoleID { get; set; }
+        public int RoleID { get; set; } = 2;
         public DateTime LastLoginAt { get; set; }
         public bool? IsActive { get; set; }
         public bool? IsEmailVerified { get; set; }
@@ -46,7 +51,7 @@ namespace FLEXIERP.MODELS
         public string? State { get; set; }
         public string? Country { get; set; }
         public string? ProfileImageUrl { get; set; }
-        public int RoleID { get; set; }
+        public int RoleID { get; set; } = 2;
         public DateTime LastLoginAt { get; set; }
         public bool? IsActive { get; set; }
         public bool? IsEmailVerified { get; set; }
@@ -290,4 +295,23 @@ namespace FLEXIERP.MODELS
     }
 
 
+public class SaveNotes
+    {
+        [JsonPropertyName("title")]
+        public required string Title { get; set; }
+
+        [JsonPropertyName("content")]
+        public required string Content { get; set; }
+
+        [JsonPropertyName("authorId")]
+        public int? AuthorId { get; set; }
+
+        [JsonPropertyName("isPinned")]
+        public bool IsPinned { get; set; }
+
+        [JsonPropertyName("isArchived")]
+        public bool IsArchived { get; set; }
+
+        public int? CreatedBy { get; set; }
+    }
 }

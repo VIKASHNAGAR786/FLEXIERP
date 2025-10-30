@@ -88,5 +88,62 @@ namespace FLEXIERP.Controllers
             }
         }
         #endregion
+
+        #region notes
+        [HttpPost("SaveNote")]
+        public async Task<ActionResult<int>> SaveNote([FromBody] SaveNotes notes)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                notes.CreatedBy = (int)userid!;
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                var result = await commonservice.SaveNoteAsync(notes);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetAllNotes")]
+        public async Task<IActionResult> GetAllNotes()
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var result = await commonservice.GetAllNotesAsync();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetNoteDetailsByIdAsync")]
+        public async Task<IActionResult> GetNoteDetailsByIdAsync([FromQuery]int rowid)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var result = await commonservice.GetNoteDetailsByIdAsync(rowid);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
     }
 }

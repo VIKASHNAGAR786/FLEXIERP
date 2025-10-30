@@ -423,5 +423,176 @@ namespace FLEXIERP.DataAccessLayer
         }
 
         #endregion
+
+        #region Notes
+        public async Task<int> SaveNoteAsync(SaveNotes note)
+        {
+            int insertedId = 0;
+
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
+        INSERT INTO flexi_notes
+        (title, content, created_at, updated_at, author_id, is_pinned, is_archived, CreatedBy)
+        VALUES
+        (@title, @content, @created_at, @updated_at, @author_id, @is_pinned, @is_archived, @CreatedBy);
+        SELECT last_insert_rowid();";
+
+                // Parameters
+                cmd.Parameters.AddWithValue("@title", (object?)note.Title ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@content", (object?)note.Content ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@created_at", DateTime.Now);
+                cmd.Parameters.AddWithValue("@updated_at", DateTime.Now);
+                cmd.Parameters.AddWithValue("@author_id", note.AuthorId);
+                cmd.Parameters.AddWithValue("@is_pinned", note.IsPinned);
+                cmd.Parameters.AddWithValue("@is_archived", note.IsArchived);
+                cmd.Parameters.AddWithValue("@CreatedBy", note.CreatedBy);
+
+                // Execute and get the inserted ID
+                var result = await cmd.ExecuteScalarAsync();
+                insertedId = result != null ? Convert.ToInt32(result) : 0;
+
+                transaction.Commit();
+                return insertedId;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+
+        public async Task<List<NoteDto>> GetAllNotesAsync()
+        {
+            var notes = new List<NoteDto>();
+            var connection = sqlConnection.GetConnection();
+
+            try
+            {
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"
+                                      SELECT 
+  notes.id,
+  notes.title,
+  substr(notes.content, 1, 15) || '....' AS content,
+  notes.created_at,
+  notes.updated_at,
+  user.FullName,
+  notes.is_pinned,
+  notes.is_archived,
+  user.FullName,
+  user.FullName,
+  notes.status
+FROM flexi_notes as notes
+LEFT JOIN Tbl_Users as user on notes.author_id = user.userid
+WHERE status = 1
+ORDER BY created_at DESC;
+                            ";
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var note = new NoteDto
+                    {
+                        Id = reader.GetInt32(0),
+                        Title = reader.GetString(1),
+                        Content = reader.GetString(2),
+                        CreatedAt = reader.GetDateTime(3),
+                        UpdatedAt = reader.IsDBNull(4) ? null : reader.GetDateTime(4),
+                        AuthorId = reader.GetString(5),
+                        IsPinned = reader.GetBoolean(6),
+                        IsArchived = reader.GetBoolean(7),
+                        CreatedBy = reader.GetString(8),
+                        UpdatedBy = reader.IsDBNull(9) ? null : reader.GetString(9),
+                        Status = reader.GetBoolean(10)
+                    };
+                    notes.Add(note);
+                }
+
+                return notes;
+            }
+            catch (Exception ex)
+            {
+                // Optional: log the exception here
+                throw new Exception("Error retrieving notes", ex);
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+
+        public async Task<NoteDetailsDto> GetNoteDetailsByIdAsync(int rowid)
+        {
+            var connection = sqlConnection.GetConnection();
+
+            try
+            {
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"
+            SELECT 
+                notes.title,
+                notes.content AS content,
+                strftime('%Y-%m-%d %I:%M:%S %p', notes.created_at) AS created_at,
+                strftime('%Y-%m-%d %I:%M:%S %p', notes.updated_at) AS updated_at,
+                user.FullName AS author_name,
+                notes.is_pinned,
+                notes.is_archived,
+                user.FullName AS created_by_name,
+                user.FullName AS updated_by_name,
+                notes.status
+            FROM flexi_notes AS notes
+            LEFT JOIN Tbl_Users AS user ON notes.author_id = user.userid
+            WHERE notes.status = 1 AND notes.id = @rowid
+            ORDER BY notes.created_at DESC;
+        ";
+
+                cmd.Parameters.AddWithValue("@rowid", rowid);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var note = new NoteDetailsDto
+                    {
+                        title = reader.GetString(0),
+                        content = reader.GetString(1),
+                        createdat = reader.GetString(2),
+                        updatedat = reader.IsDBNull(3) ? null : reader.GetString(3),
+                        authorname = reader.GetString(4),
+                        ispinned = reader.GetBoolean(5),
+                        isarchived = reader.GetBoolean(6),
+                        createdbyname = reader.GetString(7),
+                        updatedbyname = reader.GetString(8),
+                        status = reader.GetBoolean(9)
+                    };
+                    return note;
+                }
+
+                return new NoteDetailsDto();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error retrieving note details", ex);
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+        #endregion
     }
 }

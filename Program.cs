@@ -25,6 +25,7 @@ builder.Services.AddScoped<ISaleRepo, SaleRepo>();
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<ICommonMasterRepo, CommonMasterRepo>();
 builder.Services.AddScoped<ICommonMasterService, CommonMasterService>();
+builder.Services.AddScoped<IBackupService, BackupService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
