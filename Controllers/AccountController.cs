@@ -324,7 +324,7 @@ namespace FLEXIERP.Controllers
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
 
-                var pdfBytes = await accouuntservice.GetCustomerledgerdetailspdf(customerid, startDate, endDate);
+                var pdfBytes = await accouuntservice.GetCustomerledgerdetailspdf(customerid, startDate, endDate, (int)userid);
                 return File(pdfBytes, "application/pdf", "GetCustomerledgerdetailspdf.pdf");
             }
             catch (Exception ex)

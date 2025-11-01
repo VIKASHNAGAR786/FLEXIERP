@@ -1,4 +1,5 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
+﻿using DocumentFormat.OpenXml.ExtendedProperties;
+using DocumentFormat.OpenXml.Spreadsheet;
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.MODELS;
@@ -154,33 +155,81 @@ namespace FLEXIERP.BusinessLayer
         }
 
 
-        public async Task<byte[]> GetCustomerledgerdetailspdf(int customerid, string StartDate, string EndDate)
+        public async Task<byte[]> GetCustomerledgerdetailspdf(int customerid, string startDate, string endDate, int userId)
         {
-            List<CustomerledgerdetailDto?> data = (List<CustomerledgerdetailDto?>)await this.accountRepo.GetCustomerledgerdetails(customerid, StartDate, EndDate);
+            // Fetch data
+            var data = (List<CustomerledgerdetailDto?>)await accountRepo.GetCustomerledgerdetails(customerid, startDate, endDate);
+            var company = await accountRepo.GetCompanyInfoByUserAsync(userId);
+
+            if (data == null || data.Count == 0)
+                throw new Exception("No ledger data found.");
+
             var document = Document.Create(container =>
             {
                 container.Page(page =>
                 {
+                    // --- Page Setup ---
                     page.Size(PageSizes.A4);
-                    page.Margin(20);
+                    page.Margin(35);
                     page.DefaultTextStyle(TextStyle.Default.FontSize(10));
 
-                    // --- Header ---
-                    page.Header().Row(header =>
+                    // --- Background Watermark ---
+                    page.Background().AlignCenter().AlignMiddle().Element(c =>
                     {
-                        header.RelativeColumn().Text("Customer Ledger Report").FontSize(16).Bold().FontColor(Colors.Blue.Medium);
-                        header.ConstantColumn(100).Text($"Date: {DateTime.Now:dd-MMM-yyyy}").FontSize(9).AlignRight();
+                        c.Rotate(-45)
+                         .Text(company.CompanyName ?? "Company")
+                         .FontSize(80)
+                         .Bold()
+                         .FontColor(Colors.Grey.Lighten3)
+                         .AlignCenter();
                     });
 
+                    // --- Header Section ---
+                    page.Header().Column(header =>
+                    {
+                        header.Item().Row(row =>
+                        {
+                            // Company Info
+                            row.RelativeColumn().Column(col =>
+                            {
+                                col.Item().Text(company.CompanyName ?? "Company Name")
+                                    .FontSize(16).Bold().FontColor(Colors.Blue.Medium);
+                                col.Item().Text(company.Address ?? "—")
+                                    .FontSize(9).FontColor(Colors.Grey.Darken2);
+                                col.Item().Text($"Phone: {company.ContactNo ?? "—"} | Email: {company.Email ?? "—"}")
+                                    .FontSize(9).FontColor(Colors.Grey.Darken1);
+                            });
+
+                            // Company Logo
+                            row.ConstantColumn(80).AlignRight().AlignMiddle().Element(e =>
+                            {
+                                var logoPath = string.IsNullOrWhiteSpace(company.CompanyLogo)
+                                    ? null
+                                    : Path.Combine("Documents", company.CompanyLogo);
+
+                                if (!string.IsNullOrWhiteSpace(logoPath) && File.Exists(logoPath))
+                                    e.Image(logoPath, ImageScaling.FitArea);
+                                else
+                                    e.Border(1).BorderColor(Colors.Grey.Lighten2)
+                                     .AlignCenter().AlignMiddle().Height(50)
+                                     .Text("No Logo").FontSize(8).FontColor(Colors.Grey.Medium);
+                            });
+                        });
+
+                        header.Item().PaddingVertical(5).LineHorizontal(1);
+                    });
+
+                    // --- Content Section ---
                     page.Content().Column(content =>
                     {
                         // --- Customer Info ---
-                        content.Item().Padding(10).Background(Colors.Grey.Darken3.WithAlpha(0.6f)).Border(1).BorderColor(Colors.Teal.Medium)
+                        content.Item().Padding(10)
+                            .Background(Colors.Grey.Darken3.WithAlpha(0.6f))
+                            .Border(1).BorderColor(Colors.Teal.Medium)
                             .Row(row =>
                             {
                                 row.RelativeColumn().Text($"Party Name: {data[0]!.customername!.ToUpper()}")
-                                    .FontColor(Colors.White)
-                                    .SemiBold();
+                                    .FontColor(Colors.White).SemiBold();
 
                                 row.RelativeColumn().Text($"Contact No: {data[0]!.contactno}")
                                     .FontColor(Colors.White);
@@ -188,7 +237,7 @@ namespace FLEXIERP.BusinessLayer
 
                         content.Item().PaddingTop(10);
 
-                        // --- Table ---
+                        // --- Ledger Table ---
                         content.Item().Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
@@ -197,14 +246,14 @@ namespace FLEXIERP.BusinessLayer
                                     columns.RelativeColumn();
                             });
 
-                            // Header
+                            // --- Table Header ---
                             table.Header(header =>
                             {
                                 string[] headers = new[]
                                 {
-                                "Paid Amount","Balance Due","Total Amt","Payment Mode",
-                                "Transaction Type","Sale Date","Total Items","Discount","Tax","Transaction Date"
-                            };
+                            "Paid Amount","Balance Due","Total Amt","Payment Mode",
+                            "Transaction Type","Sale Date","Total Items","Discount","Tax","Transaction Date"
+                        };
 
                                 foreach (var h in headers)
                                     header.Cell().Element(CellHeaderStyle).Text(h);
@@ -216,7 +265,7 @@ namespace FLEXIERP.BusinessLayer
                                              .DefaultTextStyle(TextStyle.Default.FontColor(Colors.White).SemiBold());
                             });
 
-                            // Rows
+                            // --- Table Rows ---
                             foreach (var record in data)
                             {
                                 table.Cell().Element(CellStyle).Text(record.paidamt.ToString("F2")).AlignCenter();
@@ -231,17 +280,15 @@ namespace FLEXIERP.BusinessLayer
                                 table.Cell().Element(CellStyle).Text(record.transactiondate.ToString()).AlignCenter();
                             }
 
-                           
-
                             static IContainer CellStyle(IContainer container) =>
-                                container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                         .Padding(4);
+                                container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4);
                         });
                     });
 
                     // --- Footer ---
                     page.Footer().AlignCenter()
-                        .Text("Thank you for your business!").FontColor(Colors.Grey.Medium);
+                        .Text("Thank you for your business!")
+                        .FontColor(Colors.Grey.Medium);
                 });
             });
 
@@ -250,4 +297,5 @@ namespace FLEXIERP.BusinessLayer
 
         #endregion
     }
+
 }

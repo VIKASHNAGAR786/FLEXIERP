@@ -33,6 +33,22 @@ namespace FLEXIERP.DataAccessLayer
         }
 
 
+        #region payment mode string
+        private string GetPaymentModeName(int paymentMode)
+        {
+            return paymentMode switch
+            {
+                1 => "Cash",
+                2 => "Cheque",
+                3 => "UPI",
+                4 => "Bank Transfer",
+                5 => "Card",
+                _ => "Unknown"
+            };
+        }
+
+        #endregion
+
         #region common properties
         private const int SaltSize = 16; // 128-bit
         private const int KeySize = 32;  // 256-bit
@@ -799,7 +815,7 @@ ORDER BY cl.create_at DESC;
                         paidamt = !reader.IsDBNull(2) ? Convert.ToDecimal(reader.GetValue(2)) : 0,
                         balancedue = !reader.IsDBNull(3) ? Convert.ToDecimal(reader.GetValue(3)) : 0,
                         totalamount = !reader.IsDBNull(4) ? Convert.ToDecimal(reader.GetValue(4)) : 0,
-                        paymentmode = !reader.IsDBNull(5) ? reader.GetInt32(5) : 0,
+                        paymentmode = !reader.IsDBNull(5) ? this.GetPaymentModeName(reader.GetInt32(5)) : null,
                         transactiontype = !reader.IsDBNull(6) ? reader.GetString(6) : string.Empty,
                         transactiondate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
                         saledate = !reader.IsDBNull(8) ? reader.GetString(8) : string.Empty,
