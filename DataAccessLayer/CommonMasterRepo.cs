@@ -438,11 +438,21 @@ namespace FLEXIERP.DataAccessLayer
                 using var cmd = connection.CreateCommand();
                 cmd.Transaction = transaction;
                 cmd.CommandText = @"
-        INSERT INTO flexi_notes
-        (title, content, created_at, updated_at, author_id, is_pinned, is_archived, CreatedBy)
-        VALUES
-        (@title, @content, @created_at, @updated_at, @author_id, @is_pinned, @is_archived, @CreatedBy);
-        SELECT last_insert_rowid();";
+                                INSERT INTO flexi_notes (
+                                    id, title, content, created_at, updated_at, author_id, is_pinned, is_archived, CreatedBy, UpdatedBy
+                                )
+                                VALUES (
+                                    NULLIF(@id, 0), @title, @content, @created_at, @updated_at, @author_id, @is_pinned, @is_archived, @CreatedBy, NULL
+                                )
+                                ON CONFLICT(id) DO UPDATE SET
+                                    title = excluded.title,
+                                    content = excluded.content,
+                                    updated_at = excluded.updated_at,
+                                    author_id = excluded.author_id,
+                                    is_pinned = excluded.is_pinned,
+                                    is_archived = excluded.is_archived,
+                                    UpdatedBy = @UpdatedBy;
+                                ";
 
                 // Parameters
                 cmd.Parameters.AddWithValue("@title", (object?)note.Title ?? DBNull.Value);
@@ -453,6 +463,8 @@ namespace FLEXIERP.DataAccessLayer
                 cmd.Parameters.AddWithValue("@is_pinned", note.IsPinned);
                 cmd.Parameters.AddWithValue("@is_archived", note.IsArchived);
                 cmd.Parameters.AddWithValue("@CreatedBy", note.CreatedBy);
+                cmd.Parameters.AddWithValue("@id", note.notesid);
+                cmd.Parameters.AddWithValue("@UpdatedBy", note.CreatedBy);
 
                 // Execute and get the inserted ID
                 var result = await cmd.ExecuteScalarAsync();

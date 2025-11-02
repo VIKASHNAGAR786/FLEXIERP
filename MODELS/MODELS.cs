@@ -313,5 +313,7 @@ public class SaveNotes
         public bool IsArchived { get; set; }
 
         public int? CreatedBy { get; set; }
+        public int? notesid { get; set; }
+
     }
 }
