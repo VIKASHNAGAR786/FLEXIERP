@@ -1,4 +1,5 @@
 ﻿
+using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 
 namespace FLEXIERP.DataAccessLayer_Interfaces
@@ -20,5 +21,9 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid, string StartDate, string EndDate);
         #endregion
 
+        #region Balance Due
+        public Task<IEnumerable<BalanceDueDto?>> GetBalanceDueListAsync(int pageNumber, int pageSize, string? searchTerm);
+
+        #endregion
     }
 }

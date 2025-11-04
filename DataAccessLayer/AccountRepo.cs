@@ -14,6 +14,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using FLEXIERP.MODELS;
 using Microsoft.Data.Sqlite;
+using FLEXIERP.DTOs;
 
 namespace FLEXIERP.DataAccessLayer
 {
@@ -833,6 +834,92 @@ ORDER BY cl.create_at DESC;
             }
 
             return ledgerDetails;
+        }
+
+        #endregion
+
+        #region Balance Due
+        public async Task<IEnumerable<BalanceDueDto?>> GetBalanceDueListAsync(int pageNumber, int pageSize, string? searchTerm)
+        {
+            var result = new List<BalanceDueDto?>();
+
+            string query = @"
+    WITH FilteredData AS (
+        SELECT 
+            due.customerid,
+            cstmr.CustomerName,
+            cstmr.CustomerAddress,
+            cstmr.PhoneNo,
+            cstmr.Email,
+            due.total_due_amount,
+            due.dueid,
+            strftime('%d-%m-%Y %I:%M %p', MAX(ledger.create_at)) AS last_transaction_date
+        FROM balance_due AS due
+        LEFT JOIN Customer AS cstmr 
+            ON due.customerid = cstmr.customerid
+        INNER JOIN Customer_ledger AS ledger 
+            ON due.customerid = ledger.customer_id
+        WHERE 
+            (@SearchTerm IS NULL OR @SearchTerm = '' OR
+             cstmr.CustomerName LIKE '%' || @SearchTerm || '%' OR
+             cstmr.CustomerAddress LIKE '%' || @SearchTerm || '%' OR
+             cstmr.PhoneNo LIKE '%' || @SearchTerm || '%' OR
+             cstmr.Email LIKE '%' || @SearchTerm || '%')
+        GROUP BY 
+            due.customerid,
+            cstmr.CustomerName,
+            cstmr.CustomerAddress,
+            cstmr.PhoneNo,
+            cstmr.Email,
+            due.total_due_amount,
+            due.dueid
+    )
+    SELECT 
+        f.*,
+        COUNT(*) OVER() AS TotalRecords
+    FROM FilteredData AS f
+    ORDER BY f.last_transaction_date DESC
+    LIMIT @PageSize OFFSET @Offset;
+    ";
+
+            try
+            {
+                using var connection = sqlConnection.GetConnection(); // returns SQLiteConnection
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = query;
+                cmd.CommandType = CommandType.Text;
+
+                int offset = (pageNumber - 1) * pageSize;
+
+                cmd.Parameters.AddWithValue("@PageSize", pageSize);
+                cmd.Parameters.AddWithValue("@Offset", offset);
+                cmd.Parameters.AddWithValue("@SearchTerm", searchTerm ?? string.Empty);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    result.Add(new BalanceDueDto
+                    {
+                        CustomerId = !reader.IsDBNull(0) ? reader.GetInt32(0) : 0,
+                        CustomerName = !reader.IsDBNull(1) ? reader.GetString(1) : string.Empty,
+                        CustomerAddress = !reader.IsDBNull(2) ? reader.GetString(2) : string.Empty,
+                        PhoneNo = !reader.IsDBNull(3) ? reader.GetString(3) : string.Empty,
+                        Email = !reader.IsDBNull(4) ? reader.GetString(4) : string.Empty,
+                        TotalDueAmount = !reader.IsDBNull(5) ? Convert.ToDecimal(reader.GetValue(5)) : 0,
+                        DueId = !reader.IsDBNull(6) ? reader.GetInt32(6) : 0,
+                        LastTransactionDate = !reader.IsDBNull(7) ? reader.GetString(7) : string.Empty,
+                        totalrecords = !reader.IsDBNull(8) ? reader.GetInt32(8) : 0
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to retrieve balance due list from SQLite. Please try again later.", ex);
+            }
+
+            return result;
         }
 
         #endregion

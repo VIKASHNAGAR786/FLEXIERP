@@ -18,6 +18,8 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<int> SaveNoteAsync(SaveNotes note);
         public Task<List<NoteDto>> GetAllNotesAsync();
         public Task<NoteDetailsDto> GetNoteDetailsByIdAsync(int rowid);
+        public Task<int> DeleteNotesById(int deletednotsid);
+        public Task<int> MarkPinned(int notesid);
         #endregion
     }
 }

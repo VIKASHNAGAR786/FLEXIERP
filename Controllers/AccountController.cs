@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.BusinessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
+using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using FLEXIERP.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -334,5 +335,29 @@ namespace FLEXIERP.Controllers
         }
         #endregion
 
+        #region Balance Due
+        [HttpGet("GetBalanceDueListAsync")]
+        public async Task<IActionResult> GetBalanceDueListAsync([FromQuery] int pageNumber = 1, int pageSize = 10, string? searchTerm = null)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                IEnumerable<BalanceDueDto?> data = await accouuntservice.GetBalanceDueListAsync(pageNumber, pageSize, searchTerm);
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                // You can log ex.Message here using ILogger
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving customer ledger data.",
+                    details = ex.Message
+                });
+            }
+        }
+        #endregion
     }
 }

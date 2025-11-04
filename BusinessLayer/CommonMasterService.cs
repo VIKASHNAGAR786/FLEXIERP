@@ -38,7 +38,7 @@ namespace FLEXIERP.BusinessLayer
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
-                    page.Margin(30);
+                    page.Margin(10);
                     page.DefaultTextStyle(x => x.FontSize(10));
 
                     // Header
@@ -261,6 +261,14 @@ namespace FLEXIERP.BusinessLayer
         public async Task<NoteDetailsDto> GetNoteDetailsByIdAsync(int rowid)
         {
             return await this.commonmaster.GetNoteDetailsByIdAsync(rowid);
+        }
+        public async Task<int> DeleteNotesById(int deletednotsid)
+        {
+            return await this.commonmaster.DeleteNotesById(deletednotsid);
+        }
+        public async Task<int> MarkPinned(int notesid)
+        {
+            return await this.commonmaster.MarkPinned(notesid);
         }
         #endregion
 

@@ -144,6 +144,41 @@ namespace FLEXIERP.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        [HttpDelete("DeleteNotesById")]
+        public async Task<IActionResult> DeleteNotesById([FromQuery] int deletednotsid)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var result = await commonservice.DeleteNotesById(deletednotsid);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        [HttpPut("MarkPinned")]
+        public async Task<IActionResult> MarkPinned([FromQuery] int notesid)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var result = await commonservice.MarkPinned(notesid);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
         #endregion
     }
 }

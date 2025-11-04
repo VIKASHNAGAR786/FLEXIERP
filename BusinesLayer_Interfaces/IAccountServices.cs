@@ -1,4 +1,5 @@
-﻿using FLEXIERP.MODELS;
+﻿using FLEXIERP.DTOs;
+using FLEXIERP.MODELS;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FLEXIERP.BusinesLayer_Interfaces
@@ -18,6 +19,11 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<IEnumerable<CustomerledgerDto?>> GetCustomerledger(int pageNo = 1, int pageSize = 20);
         public Task<IEnumerable<CustomerledgerdetailDto?>> GetCustomerledgerdetails(int customerid, string StartDate, string EndDate);
         public Task<byte[]> GetCustomerledgerdetailspdf(int customerid, string StartDate, string EndDate, int userId);
+        #endregion
+
+        #region Balance Due
+        public Task<IEnumerable<BalanceDueDto?>> GetBalanceDueListAsync(int pageNumber, int pageSize, string? searchTerm);
+
         #endregion
     }
 }

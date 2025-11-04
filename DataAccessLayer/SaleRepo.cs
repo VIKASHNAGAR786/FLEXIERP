@@ -225,6 +225,83 @@ namespace FLEXIERP.DataAccessLayer
                     }
                 }
 
+                if (sale.Customer?.BalanceDue is not null && sale.Customer?.BalanceDue > 0)
+                {
+                    long dueId = 0;
+
+                    // 1️⃣ Check if the customer already has a balance_due record
+                    using (var checkCmd = connection.CreateCommand())
+                    {
+                        checkCmd.Transaction = transaction;
+                        checkCmd.CommandText = "SELECT dueid FROM balance_due WHERE customerid = @CustomerId LIMIT 1;";
+                        checkCmd.Parameters.AddWithValue("@CustomerId", sale.customerID);
+
+                        var result = await checkCmd.ExecuteScalarAsync();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            dueId = Convert.ToInt64(result);
+
+                            // 2️⃣ If exists, update total_due_amount
+                            using var updateCmd = connection.CreateCommand();
+                            updateCmd.Transaction = transaction;
+                            updateCmd.CommandText = @"
+                UPDATE balance_due
+                SET total_due_amount = total_due_amount + @AddAmount,
+                    updateby = @UpdatedBy,
+                    updateat = @UpdatedAt
+                WHERE dueid = @DueId;
+            ";
+
+                            updateCmd.Parameters.AddWithValue("@AddAmount", sale.Customer?.BalanceDue ?? 0);
+                            updateCmd.Parameters.AddWithValue("@UpdatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
+                            updateCmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
+                            updateCmd.Parameters.AddWithValue("@DueId", dueId);
+
+                            await updateCmd.ExecuteNonQueryAsync();
+                        }
+                        else
+                        {
+                            // 3️⃣ If not exists, insert a new master record
+                            using var insertCmd = connection.CreateCommand();
+                            insertCmd.Transaction = transaction;
+                            insertCmd.CommandText = @"
+                INSERT INTO balance_due (customerid, total_due_amount, createby, create_at)
+                VALUES (@CustomerId, @TotalDueAmount, @CreatedBy, @CreateAt);
+            ";
+
+                            insertCmd.Parameters.AddWithValue("@CustomerId", sale.customerID);
+                            insertCmd.Parameters.AddWithValue("@TotalDueAmount", sale.Customer?.BalanceDue ?? 0);
+                            insertCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
+                            insertCmd.Parameters.AddWithValue("@CreateAt", DateTime.Now);
+
+                            await insertCmd.ExecuteNonQueryAsync();
+
+                            // 4️⃣ Get the new dueid
+                            using var getIdCmd = connection.CreateCommand();
+                            getIdCmd.Transaction = transaction;
+                            getIdCmd.CommandText = "SELECT last_insert_rowid();";
+                            dueId = (long)(await getIdCmd.ExecuteScalarAsync() ?? 0);
+                        }
+                    }
+
+                    // 5️⃣ Insert into detail table (always happens)
+                    using var detailCmd = connection.CreateCommand();
+                    detailCmd.Transaction = transaction;
+
+                    detailCmd.CommandText = @"
+        INSERT INTO balance_due_detail (dueid, saleid, due_amount, createby, create_at)
+        VALUES (@DueId, @SaleId, @DueAmount, @CreatedBy, @CreateAt);
+    ";
+
+                    detailCmd.Parameters.AddWithValue("@DueId", dueId);
+                    detailCmd.Parameters.AddWithValue("@SaleId", saleId);
+                    detailCmd.Parameters.AddWithValue("@DueAmount", sale.Customer?.BalanceDue ?? 0);
+                    detailCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
+                    detailCmd.Parameters.AddWithValue("@CreateAt", DateTime.Now);
+
+                    await detailCmd.ExecuteNonQueryAsync();
+                }
+
                 // 5️⃣ Insert Customer Ledger
                 using var ledgerCmd = connection.CreateCommand();
                 ledgerCmd.Transaction = transaction;

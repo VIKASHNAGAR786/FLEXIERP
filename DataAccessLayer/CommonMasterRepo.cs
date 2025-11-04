@@ -507,10 +507,10 @@ namespace FLEXIERP.DataAccessLayer
   user.FullName,
   user.FullName,
   notes.status
-FROM flexi_notes as notes
-LEFT JOIN Tbl_Users as user on notes.author_id = user.userid
-WHERE status = 1
-ORDER BY created_at DESC;
+FROM flexi_notes AS notes
+LEFT JOIN Tbl_Users AS user ON notes.author_id = user.userid
+WHERE notes.status = 1
+ORDER BY notes.is_pinned DESC, notes.created_at DESC;
                             ";
 
                 using var reader = await cmd.ExecuteReaderAsync();
@@ -605,6 +605,90 @@ ORDER BY created_at DESC;
                 await connection.CloseAsync();
             }
         }
+
+        public async Task<int> DeleteNotesById(int deletednotsid)
+        {
+
+            int insertedId = 0;
+
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
+                               UPDATE flexi_notes
+SET status = 0
+WHERE id = @id;
+
+SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_deleted;
+                                ";
+
+                // Parameters
+                cmd.Parameters.AddWithValue("@id", (object?)deletednotsid);
+
+                // Execute and get the inserted ID
+                var result = await cmd.ExecuteScalarAsync();
+                insertedId = result != null ? Convert.ToInt32(result) : 0;
+
+                transaction.Commit();
+                return insertedId;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+
+        public async Task<int> MarkPinned(int notesid)
+        {
+
+            int insertedId = 0;
+
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
+UPDATE flexi_notes
+SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END
+WHERE id = @id;
+SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_updated;
+                                ";
+
+                // Parameters
+                cmd.Parameters.AddWithValue("@id", (object?)notesid);
+
+                // Execute and get the inserted ID
+                var result = await cmd.ExecuteScalarAsync();
+                insertedId = result != null ? Convert.ToInt32(result) : 0;
+
+                transaction.Commit();
+                return insertedId;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+
         #endregion
     }
 }

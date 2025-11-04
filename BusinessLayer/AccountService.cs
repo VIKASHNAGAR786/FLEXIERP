@@ -2,6 +2,7 @@
 using DocumentFormat.OpenXml.Spreadsheet;
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
+using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using Microsoft.AspNetCore.Mvc;
 using QuestPDF.Drawing;
@@ -64,6 +65,8 @@ namespace FLEXIERP.BusinessLayer
             return (browser, os);
         }
         #endregion
+
+        #region login/logout/register
         public async Task<User1?> Login(string? email, string? UserName, string password)
         {
             User1? result = await this.accountRepo.Login(email, UserName, password);
@@ -104,6 +107,9 @@ namespace FLEXIERP.BusinessLayer
             return await this.accountRepo.GetUserLoginHistory(pageNo, pageSize);
         }
 
+        #endregion
+
+        #region companu info
         public async Task<CompanyInfoDto?> GetCompanyInfoByUserAsync(int userId)
         {
             return await this.accountRepo.GetCompanyInfoByUserAsync(userId);
@@ -138,7 +144,8 @@ namespace FLEXIERP.BusinessLayer
                 throw new Exception("Error saving product images: " + ex.Message);
                 throw;
             }
-        }
+        } 
+        #endregion
 
         #region Customer Ledger
         public Task<int> Savecustomerledger(Customerledgermodel customerledger)
@@ -170,7 +177,7 @@ namespace FLEXIERP.BusinessLayer
                 {
                     // --- Page Setup ---
                     page.Size(PageSizes.A4);
-                    page.Margin(35);
+                    page.Margin(15);
                     page.DefaultTextStyle(TextStyle.Default.FontSize(10));
 
                     // --- Background Watermark ---
@@ -295,6 +302,13 @@ namespace FLEXIERP.BusinessLayer
             return document.GeneratePdf();
         }
 
+        #endregion
+
+        #region Balance Due
+        public async Task<IEnumerable<BalanceDueDto?>> GetBalanceDueListAsync(int pageNumber, int pageSize, string? searchTerm)
+        {
+            return await this.accountRepo.GetBalanceDueListAsync(pageNumber, pageSize, searchTerm);
+        }
         #endregion
     }
 

@@ -241,4 +241,18 @@
         public string updatedbyname { get; set; }
         public bool status { get; set; }
     }
+
+    public class BalanceDueDto
+    {
+        public int CustomerId { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerAddress { get; set; }
+        public string? PhoneNo { get; set; }
+        public string? Email { get; set; }
+        public decimal TotalDueAmount { get; set; }
+        public int DueId { get; set; }
+        public string? LastTransactionDate { get; set; }
+        public int? totalrecords { get; set; }
+    }
+
 }
