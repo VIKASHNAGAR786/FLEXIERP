@@ -316,4 +316,17 @@ public class SaveNotes
         public int? notesid { get; set; }
 
     }
+
+    public record SettleBalance
+    {
+        public decimal settledamount { get; set; }    // Amount being paid/settled
+        public decimal remainingamount { get; set; }  // Amount left after settlement
+        public int paymode { get; set; }          // e.g., 'Cash', 'UPI', 'Bank Transfer'
+        public int customerid { get; set; }       // ID of the customer
+        public int dueid { get; set; }            // ID of the due entry
+        public SaveChequePaymentDto? chequepayment { get; set; } // optional cheque details
+        public int? payid { get; set; } // optional cheque details
+        public int? createby { get; set; } // optional cheque details
+    }
+
 }

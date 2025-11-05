@@ -1,6 +1,7 @@
 ﻿using DocumentFormat.OpenXml.ExtendedProperties;
 using DocumentFormat.OpenXml.Spreadsheet;
 using FLEXIERP.BusinesLayer_Interfaces;
+using FLEXIERP.DataAccessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
@@ -20,11 +21,13 @@ namespace FLEXIERP.BusinessLayer
     {
         private readonly IAccountRepo accountRepo;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ICommonMasterRepo commonmaster;
 
-        public AccountService(IAccountRepo accountRepo, IHttpContextAccessor httpContextAccessor)
+        public AccountService(IAccountRepo accountRepo, IHttpContextAccessor httpContextAccessor, ICommonMasterRepo commonmaster)
         {
             this.accountRepo = accountRepo;
             _httpContextAccessor = httpContextAccessor;
+            this.commonmaster = commonmaster;
         }
 
         #region common
@@ -308,6 +311,46 @@ namespace FLEXIERP.BusinessLayer
         public async Task<IEnumerable<BalanceDueDto?>> GetBalanceDueListAsync(int pageNumber, int pageSize, string? searchTerm)
         {
             return await this.accountRepo.GetBalanceDueListAsync(pageNumber, pageSize, searchTerm);
+        }
+        public async Task<int> SaveCustomerbalancesettlement(SettleBalance settlebalance)
+        {
+            int payid = 0;
+            if (settlebalance is not null)
+            {
+                if (settlebalance.paymode == 1)
+                {
+                    SaveCashPaymentDto cash = new SaveCashPaymentDto
+                    {
+
+                        Amount = (decimal)settlebalance.settledamount!,
+                        PaymentDate = DateTime.UtcNow,
+                        CreatedBy = settlebalance.createby,
+
+                    };
+                    payid = await this.commonmaster.SaveCashPaymentAsync(cash);
+                }
+                else if (settlebalance.paymode == 2)
+                {
+                    SaveChequePaymentDto cheque = new SaveChequePaymentDto
+                    {
+                        ChequeNumber = settlebalance.chequepayment!.ChequeNumber,
+                        BankName = settlebalance.chequepayment.BankName,
+                        BranchName = settlebalance.chequepayment.BranchName,
+                        ChequeDate = settlebalance.chequepayment.ChequeDate,
+                        Amount = settlebalance.chequepayment.Amount,
+                        IFSC_Code = settlebalance.chequepayment.IFSC_Code,
+                        CreatedBy = settlebalance.createby,
+
+                    };
+                    payid = await this.commonmaster.SaveChequePaymentAsync(cheque);
+                }
+                if(payid == 0)
+                {
+                    throw new Exception("Something Went Wrong");
+                }
+                settlebalance.payid = payid;
+            }
+            return await this.accountRepo.SaveCustomerbalancesettlement(settlebalance);
         }
         #endregion
     }

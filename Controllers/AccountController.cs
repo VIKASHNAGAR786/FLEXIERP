@@ -358,6 +358,28 @@ namespace FLEXIERP.Controllers
                 });
             }
         }
+
+        [HttpPost("SaveCustomerbalancesettlement")]
+        public async Task<ActionResult<Customerledgermodel>> SaveCustomerbalancesettlement([FromBody] SettleBalance settlebalance)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                {
+                    return Unauthorized("User ID not found in token.");
+                }
+                settlebalance.createby = userid.Value;
+                var addedCategory = await accouuntservice.SaveCustomerbalancesettlement(settlebalance);
+                return Ok(addedCategory);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+
         #endregion
     }
 }

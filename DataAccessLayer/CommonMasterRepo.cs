@@ -189,8 +189,8 @@ namespace FLEXIERP.DataAccessLayer
                                                 -------------------------
 
                                                 SELECT
-                                                    strftime('%d-%b-%Y', cl.create_at) AS Date,
-                                                    strftime('%I:%M %p', cl.create_at) AS Time,
+                                                    date(datetime(substr(cl.create_at, 1, 19))) AS Date,
+                                                    time(datetime(substr(cl.create_at, 1, 19))) AS Time,
                                                     cs.CustomerName,
                                                     CASE 
                                                         WHEN cl.payment_mode = 1 THEN cash.amount

@@ -164,6 +164,9 @@
         public int? TotalRecords { get; set; }
         public decimal? taxpr { get; set; }
         public decimal? discounpr { get; set; }
+        public DateTime? solddate { get; set; }
+        public decimal? soldquantity { get; set; }
+        public decimal? availablequantity { get; set; }
     }
     public class Warehouse_DTO
     {

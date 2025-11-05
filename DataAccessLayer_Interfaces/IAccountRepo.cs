@@ -23,6 +23,7 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
 
         #region Balance Due
         public Task<IEnumerable<BalanceDueDto?>> GetBalanceDueListAsync(int pageNumber, int pageSize, string? searchTerm);
+        public Task<int> SaveCustomerbalancesettlement(SettleBalance settlebalance);
 
         #endregion
     }

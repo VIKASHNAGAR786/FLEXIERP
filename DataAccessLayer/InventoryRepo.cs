@@ -419,74 +419,80 @@ namespace FLEXIERP.DataAccessLayer
                 using var cmd = connection.CreateCommand();
 
                 cmd.CommandText = @"
-            WITH ProductCTE AS (
-                SELECT
-                    pr.ProductID,
-                    pr.ProductCode,
-                    pr.BarCode,
-                    pr.ProductName,
-                    category.CategoryName,
-                    pr.ProductType,
-                    pr.PackedDate,
-                    pr.PackedWeight,
-                    pr.PackedHeight,
-                    pr.PackedDepth,
-                    pr.PackedWidth,
-                    pr.IsPerishable,
-                    pr.CreatedDate,
-                    pr.PurchasePrice,
-                    pr.SellingPrice,
-                    pr.TaxRate,
-                    pr.Discount,
-                    fuser.FullName,
-                    ROW_NUMBER() OVER (ORDER BY pr.CreatedDate DESC) AS RowNum
-                FROM product AS pr
-                INNER JOIN saledetail AS sale ON pr.ProductID = sale.ProductID
-                LEFT JOIN flexi_erp_product_category AS category ON pr.ProductCategory = category.CategoryID
-                LEFT JOIN Tbl_Users AS fuser ON pr.CreatedBy = fuser.UserID
-                WHERE
-                    (@StartDate IS NULL OR DATE(pr.CreatedDate) >= DATE(@StartDate))
-                    AND (@EndDate IS NULL OR DATE(pr.CreatedDate) <= DATE(@EndDate))
-                    AND (
-                        @SearchTerm IS NULL OR
-                        pr.ProductName LIKE '%' || @SearchTerm || '%' OR
-                        pr.ProductCode LIKE '%' || @SearchTerm || '%' OR
-                        pr.BarCode LIKE '%' || @SearchTerm || '%' OR
-                        category.CategoryName LIKE '%' || @SearchTerm || '%' OR
-                        fuser.FullName LIKE '%' || @SearchTerm || '%'
-                    )
-                GROUP BY
-                    pr.ProductID, pr.ProductCode, pr.BarCode, pr.ProductName,
-                    category.CategoryName, pr.ProductType, pr.PackedDate,
-                    pr.PackedWeight, pr.PackedHeight, pr.PackedDepth, pr.PackedWidth,
-                    pr.IsPerishable, pr.CreatedDate, pr.PurchasePrice,
-                    pr.SellingPrice, pr.TaxRate, pr.Discount, fuser.FullName
-            ),
-            TotalCount AS (
-                SELECT COUNT(*) AS TotalRecords FROM ProductCTE
-            )
-            SELECT
-                p.ProductID,
-                p.ProductCode,
-                p.BarCode,
-                p.ProductName,
-                p.CategoryName,
-                p.ProductType,
-                p.PackedDate,
-                p.PackedWeight,
-                p.PackedHeight,
-                p.PackedDepth,
-                p.PackedWidth,
-                p.IsPerishable,
-                p.CreatedDate,
-                p.PurchasePrice,
-                p.SellingPrice,
-                p.TaxRate,
-                p.Discount,
-                p.FullName,
-                t.TotalRecords
-            FROM ProductCTE p, TotalCount t
-            WHERE p.RowNum > @Offset AND p.RowNum <= (@Offset + @PageSize);
+           WITH ProductCTE AS (
+    SELECT
+        pr.ProductID,
+        pr.ProductCode,
+        pr.BarCode,
+        pr.ProductName,
+        category.CategoryName,
+        pr.ProductType,
+        pr.PackedDate,
+        pr.PackedWeight,
+        pr.PackedHeight,
+        pr.PackedDepth,
+        pr.PackedWidth,
+        pr.IsPerishable,
+        pr.CreatedDate,
+        pr.PurchasePrice,
+        pr.SellingPrice,
+        pr.TaxRate,
+        pr.Discount,
+        fuser.FullName,
+        ROW_NUMBER() OVER (ORDER BY pr.CreatedDate DESC) AS RowNum,
+		sale.CreatedDate,
+		sale.Quantity as soldquantity,
+		(pr.Quantity - sale.Quantity) as availableQuantity
+    FROM product AS pr
+    INNER JOIN saledetail AS sale ON pr.ProductID = sale.ProductID
+    LEFT JOIN flexi_erp_product_category AS category ON pr.ProductCategory = category.CategoryID
+    LEFT JOIN Tbl_Users AS fuser ON pr.CreatedBy = fuser.UserID
+    WHERE
+        (@StartDate IS NULL OR DATE(pr.CreatedDate) >= DATE(@StartDate))
+        AND (@EndDate IS NULL OR DATE(pr.CreatedDate) <= DATE(@EndDate))
+        AND (
+            @SearchTerm IS NULL OR
+            pr.ProductName LIKE '%' || @SearchTerm || '%' OR
+            pr.ProductCode LIKE '%' || @SearchTerm || '%' OR
+            pr.BarCode LIKE '%' || @SearchTerm || '%' OR
+            category.CategoryName LIKE '%' || @SearchTerm || '%' OR
+            fuser.FullName LIKE '%' || @SearchTerm || '%'
+        )
+    GROUP BY
+        pr.ProductID, pr.ProductCode, pr.BarCode, pr.ProductName,
+        category.CategoryName, pr.ProductType, pr.PackedDate,
+        pr.PackedWeight, pr.PackedHeight, pr.PackedDepth, pr.PackedWidth,
+        pr.IsPerishable, pr.CreatedDate, pr.PurchasePrice,
+        pr.SellingPrice, pr.TaxRate, pr.Discount, fuser.FullName
+),
+TotalCount AS (
+    SELECT COUNT(*) AS TotalRecords FROM ProductCTE
+)
+SELECT
+    p.ProductID,
+    p.ProductCode,
+    p.BarCode,
+    p.ProductName,
+    p.CategoryName,
+    p.ProductType,
+    p.PackedDate,
+    p.PackedWeight,
+    p.PackedHeight,
+    p.PackedDepth,
+    p.PackedWidth,
+    p.IsPerishable,
+    p.CreatedDate,
+    p.PurchasePrice,
+    p.SellingPrice,
+    p.TaxRate,
+    p.Discount,
+    p.FullName,
+    t.TotalRecords,
+	p.CreatedDate,
+	p.soldquantity,
+	p.availableQuantity
+FROM ProductCTE p, TotalCount t
+WHERE p.RowNum > @Offset AND p.RowNum <= (@Offset + @PageSize);
         ";
 
                 // Pagination setup
@@ -526,7 +532,11 @@ namespace FLEXIERP.DataAccessLayer
                         TaxRate = !reader.IsDBNull(15) ? reader.GetDecimal(15) : null,
                         Discount = !reader.IsDBNull(16) ? reader.GetDecimal(16) : null,
                         FullName = !reader.IsDBNull(17) ? reader.GetString(17) : string.Empty,
-                        TotalRecords = !reader.IsDBNull(18) ? reader.GetInt32(18) : 0
+                        TotalRecords = !reader.IsDBNull(18) ? reader.GetInt32(18) : 0,
+                        solddate = !reader.IsDBNull(19) ? reader.GetDateTime(19) : null,
+                        soldquantity = !reader.IsDBNull(20) ? reader.GetInt32(20) : 0,
+                        availablequantity = !reader.IsDBNull(21) ? reader.GetInt32(21) : 0,
+
                     });
                 }
             }

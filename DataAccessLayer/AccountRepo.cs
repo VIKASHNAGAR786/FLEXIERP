@@ -3,7 +3,11 @@ using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using DocumentFormat.OpenXml.Spreadsheet;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DATABASE;
+using FLEXIERP.DTOs;
+using FLEXIERP.MODELS;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
@@ -11,10 +15,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.AspNetCore.Authorization;
-using FLEXIERP.MODELS;
-using Microsoft.Data.Sqlite;
-using FLEXIERP.DTOs;
+using System.Transactions;
 
 namespace FLEXIERP.DataAccessLayer
 {
@@ -687,20 +688,21 @@ namespace FLEXIERP.DataAccessLayer
             var historyList = new List<CustomerledgerDto?>();
             string query = @"
         SELECT 
-            C.CustomerID,
-            C.CustomerName,
-            C.PhoneNo,
-            C.CustomerAddress,
-            C.Email,
-            IFNULL(SUM(L.paid_amt), 0) AS TotalPaidAmount_Yet,
-            IFNULL(SUM(L.balance_due), 0) AS TotalDue_Yet,
-            STRFTIME('%Y-%m-%d %H:%M', MAX(L.create_at)) AS LastTransactionDate,
-            MAX(L.customer_id) AS ROWID
-        FROM Customer C
-        LEFT JOIN Customer_Ledger L ON C.CustomerID = L.customer_id
-        GROUP BY C.CustomerID
-        ORDER BY C.CustomerName
-        LIMIT @PageSize OFFSET ((@PageNo - 1) * @PageSize);
+     C.CustomerID,
+     C.CustomerName,
+     C.PhoneNo,
+     C.CustomerAddress,
+     C.Email,
+     IFNULL(SUM(L.paid_amt), 0) AS TotalPaidAmount_Yet,
+     IFNULL(due.total_due_amount, 0) AS TotalDue_Yet,
+     STRFTIME('%Y-%m-%d %H:%M', MAX(L.create_at)) AS LastTransactionDate,
+     MAX(L.customer_id) AS ROWID
+ FROM Customer C
+ LEFT JOIN Customer_Ledger L ON C.CustomerID = L.customer_id
+ LEFT JOIN balance_due as due on L.customer_id = due.customerid
+ GROUP BY C.CustomerID
+ ORDER BY C.CustomerName
+LIMIT @PageSize OFFSET ((@PageNo - 1) * @PageSize);
     ";
 
             try
@@ -844,42 +846,42 @@ ORDER BY cl.create_at DESC;
             var result = new List<BalanceDueDto?>();
 
             string query = @"
-    WITH FilteredData AS (
-        SELECT 
-            due.customerid,
-            cstmr.CustomerName,
-            cstmr.CustomerAddress,
-            cstmr.PhoneNo,
-            cstmr.Email,
-            due.total_due_amount,
-            due.dueid,
-            strftime('%d-%m-%Y %I:%M %p', MAX(ledger.create_at)) AS last_transaction_date
-        FROM balance_due AS due
-        LEFT JOIN Customer AS cstmr 
-            ON due.customerid = cstmr.customerid
-        INNER JOIN Customer_ledger AS ledger 
-            ON due.customerid = ledger.customer_id
-        WHERE 
-            (@SearchTerm IS NULL OR @SearchTerm = '' OR
-             cstmr.CustomerName LIKE '%' || @SearchTerm || '%' OR
-             cstmr.CustomerAddress LIKE '%' || @SearchTerm || '%' OR
-             cstmr.PhoneNo LIKE '%' || @SearchTerm || '%' OR
-             cstmr.Email LIKE '%' || @SearchTerm || '%')
-        GROUP BY 
-            due.customerid,
-            cstmr.CustomerName,
-            cstmr.CustomerAddress,
-            cstmr.PhoneNo,
-            cstmr.Email,
-            due.total_due_amount,
-            due.dueid
-    )
-    SELECT 
-        f.*,
-        COUNT(*) OVER() AS TotalRecords
-    FROM FilteredData AS f
-    ORDER BY f.last_transaction_date DESC
-    LIMIT @PageSize OFFSET @Offset;
+ WITH FilteredData AS (
+     SELECT 
+         due.customerid,
+         cstmr.CustomerName,
+         cstmr.CustomerAddress,
+         cstmr.PhoneNo,
+         cstmr.Email,
+         due.total_due_amount,
+         due.dueid,
+         strftime('%d-%m-%Y %I:%M %p', MAX(ledger.create_at)) AS last_transaction_date
+     FROM balance_due AS due
+     LEFT JOIN Customer AS cstmr 
+         ON due.customerid = cstmr.customerid
+     INNER JOIN Customer_ledger AS ledger 
+         ON due.customerid = ledger.customer_id
+     WHERE 
+         (@SearchTerm IS NULL OR @SearchTerm = '' OR
+          cstmr.CustomerName LIKE '%' || @SearchTerm || '%' OR
+          cstmr.CustomerAddress LIKE '%' || @SearchTerm || '%' OR
+          cstmr.PhoneNo LIKE '%' || @SearchTerm || '%' OR
+          cstmr.Email LIKE '%' || @SearchTerm || '%')
+     GROUP BY 
+         due.customerid,
+         cstmr.CustomerName,
+         cstmr.CustomerAddress,
+         cstmr.PhoneNo,
+         cstmr.Email,
+         due.total_due_amount,
+         due.dueid
+ )
+ SELECT 
+     f.*,
+     COUNT(*) OVER() AS TotalRecords
+ FROM FilteredData AS f
+ ORDER BY f.last_transaction_date DESC
+ LIMIT @PageSize OFFSET @Offset;
     ";
 
             try
@@ -920,6 +922,87 @@ ORDER BY cl.create_at DESC;
             }
 
             return result;
+        }
+
+        public async Task<int> SaveCustomerbalancesettlement(SettleBalance settlebalance)
+        {
+            try
+            {
+                using (var connection = sqlConnection.GetConnection())
+                {
+                    await connection.OpenAsync();
+                    using var transaction = connection.BeginTransaction();
+
+                    try
+                    {
+                        // 1️⃣ Insert into Customer_ledger
+                        using (var insertCmd = connection.CreateCommand())
+                        {
+                            insertCmd.Transaction = transaction;
+                            insertCmd.CommandText = @"
+INSERT INTO Customer_ledger
+    (customer_id, paid_amt, balance_due, total_amt, payment_mode, transaction_type, create_by, create_at, payid, transaction_type_id)
+VALUES
+    (@CustomerID, @PaidAmt, @BalanceDue, @TotalAmt, @PaymentMode, @TransactionType, @CreatedBy, @CreatedAt, @PayID, @DueID);
+SELECT last_insert_rowid();";
+
+                            insertCmd.CommandType = CommandType.Text;
+
+                            insertCmd.Parameters.Add(new SqliteParameter("@CustomerID", DbType.Int32) { Value = settlebalance.customerid });
+                            insertCmd.Parameters.Add(new SqliteParameter("@PaidAmt", DbType.Decimal) { Value = settlebalance.settledamount });
+                            insertCmd.Parameters.Add(new SqliteParameter("@BalanceDue", DbType.Decimal) { Value = settlebalance.remainingamount });
+                            insertCmd.Parameters.Add(new SqliteParameter("@TotalAmt", DbType.Decimal) { Value = settlebalance.settledamount + settlebalance.remainingamount });
+                            insertCmd.Parameters.Add(new SqliteParameter("@PaymentMode", DbType.Int32) { Value = settlebalance.paymode });
+                            insertCmd.Parameters.Add(new SqliteParameter("@TransactionType", DbType.String) { Value = "DUE SETTLEMENT" });
+                            insertCmd.Parameters.Add(new SqliteParameter("@CreatedBy", DbType.Int32) { Value = settlebalance.createby });
+                            insertCmd.Parameters.Add(new SqliteParameter("@CreatedAt", DbType.DateTime) { Value = DateTime.Now });
+                            insertCmd.Parameters.Add(new SqliteParameter("@PayID", DbType.Int32) { Value = settlebalance.payid });
+                            insertCmd.Parameters.Add(new SqliteParameter("@DueID", DbType.Int32) { Value = settlebalance.dueid });
+
+                            var ledgerResult = await insertCmd.ExecuteScalarAsync();
+                            if (ledgerResult == null || Convert.ToInt32(ledgerResult) <= 0)
+                            {
+                                throw new Exception("Customer Ledger insertion failed. Please try again.");
+                            }
+
+                            int insertedId = Convert.ToInt32(ledgerResult);
+
+                            // 2️⃣ Update balance_due
+                            using (var updateCmd = connection.CreateCommand())
+                            {
+                                updateCmd.Transaction = transaction;
+                                updateCmd.CommandText = @"
+UPDATE balance_due
+SET total_due_amount = @RemainingAmount,
+    updateby = @UpdatedBy,
+    updateat = @UpdatedAt
+WHERE dueid = @DueID AND status = 1;";
+
+                                updateCmd.Parameters.AddWithValue("@RemainingAmount", settlebalance.remainingamount);
+                                updateCmd.Parameters.AddWithValue("@UpdatedBy", settlebalance.createby);
+                                updateCmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
+                                updateCmd.Parameters.AddWithValue("@DueID", settlebalance.dueid);
+
+                                await updateCmd.ExecuteNonQueryAsync();
+                            }
+
+                            // ✅ Commit transaction
+                            transaction.Commit();
+                            return insertedId;
+                        }
+                    }
+                    catch
+                    {
+                        // ❌ Rollback on error
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+            catch (SqliteException)
+            {
+                throw new Exception("Database operation failed. Please try again later.");
+            }
         }
 
         #endregion
