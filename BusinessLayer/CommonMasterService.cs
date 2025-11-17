@@ -3,14 +3,8 @@ using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
-using QuestPDF;
-using QuestPDF.Drawing;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
-using QuestPDF.Previewer;
-using Razorpay.Api;
-using SelectPdf;
 
 namespace FLEXIERP.BusinessLayer
 {

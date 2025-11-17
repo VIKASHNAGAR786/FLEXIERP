@@ -1,18 +1,11 @@
-﻿using DocumentFormat.OpenXml.ExtendedProperties;
-using DocumentFormat.OpenXml.Spreadsheet;
-using FLEXIERP.BusinesLayer_Interfaces;
-using FLEXIERP.DataAccessLayer;
+﻿using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.DataAccessLayer_Interfaces;
 using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using Microsoft.AspNetCore.Mvc;
-using QuestPDF.Drawing;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
-using QuestPDF.Previewer;
-using Razorpay.Api;
-using System.Runtime.Intrinsics.X86;
 using Colors = QuestPDF.Helpers.Colors;
 
 namespace FLEXIERP.BusinessLayer

@@ -1,5 +1,4 @@
-﻿using crypto;
-using DocumentFormat.OpenXml.Wordprocessing;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
 using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.BusinessLayer;
 using FLEXIERP.DataAccessLayer_Interfaces;
@@ -8,7 +7,6 @@ using FLEXIERP.MODELS;
 using FLEXIERP.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Razorpay.Api.Errors;
 using System.Diagnostics;
 using System.Reflection;
 
