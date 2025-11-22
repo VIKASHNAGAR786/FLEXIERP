@@ -108,6 +108,7 @@
         public decimal TotalDiscount { get; set; }
         public decimal paidamt { get; set; }
         public decimal baldue { get; set; }
+        public string? invoiceno { get; set; }
     }
 
     public class ReceiptDetailDTO

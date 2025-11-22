@@ -253,6 +253,8 @@ namespace FLEXIERP.MODELS
         public decimal TotalDiscount { get; set; }
         public DateTime? OrderDate { get; set; }
         public int? CreatedBy { get; set; }
+        public string? invoiceno { get; set; }
+
         public List<SaleDetail> SaleDetails { get; set; } = new List<SaleDetail>();
         public List<Extracharges>? extracharges { get; set; } = new List<Extracharges>();
     }

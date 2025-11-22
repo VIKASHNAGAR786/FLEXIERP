@@ -5,6 +5,12 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
 {
     public interface ICommonMasterRepo
     {
+
+        #region Number System
+        public Task<string> GetInvoiceNumber();
+        public Task<int> UpdateInvoiceNumber(int updatedBy);
+
+        #endregion
         public Task<int> SaveChequePaymentAsync(SaveChequePaymentDto chequePayment);
         public Task<int> SaveCashPaymentAsync(SaveCashPaymentDto cashPayment);
         public Task<DashboardMetricsDto?> GetDashboardMetricsAsync(string startDate, string endDate);

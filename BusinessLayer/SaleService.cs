@@ -71,7 +71,17 @@ namespace FLEXIERP.BusinessLayer
                 }
                 sale.Customer.payid = payid;
             }
-            return await _saleRepo.InsertSaleAsync(sale);
+            sale.invoiceno = await this.commonmaster.GetInvoiceNumber();
+            int result =  await _saleRepo.InsertSaleAsync(sale);
+            if(result > 0)
+            {
+                await this.commonmaster.UpdateInvoiceNumber((int)sale.CreatedBy!);
+                return result;
+            }
+            else
+            {
+                throw new Exception("Something went wrong");
+            }
         }
         #endregion
 
@@ -303,210 +313,130 @@ namespace FLEXIERP.BusinessLayer
             decimal extraTotal = extracharges?.Sum(e => e.chargeamount) ?? 0;
             decimal grandTotal = subTotal + extraTotal;
 
-            // --- Create PDF document ---
+            // --- Create PDF ---
             var document = Document.Create(container =>
             {
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
-                    page.Margin(35);
+                    page.Margin(20);
                     page.DefaultTextStyle(TextStyle.Default.FontSize(10));
 
-                    // --- Background watermark ---
-                    page.Background().AlignCenter().AlignMiddle().Element(c =>
+                    // ---------------- HEADER (Red Banner) ----------------
+                    page.Header().Column(col =>
                     {
-                        c.Rotate(-45)
-                         .Text(company.CompanyName)
-                         .FontSize(80)
-                         .Bold()
-                         .FontColor(Colors.Grey.Lighten3)
-                         .AlignCenter();
-                    });
-
-                    // --- Header Section ---
-                    page.Header().Column(header =>
-                    {
-                        header.Item().Row(row =>
+                        col.Item().Background("#cc0000").Padding(10).AlignCenter().Column(h =>
                         {
-                            // Company Info
-                            row.RelativeColumn().Column(col =>
-                            {
-                                col.Item().Text(company.CompanyName)
-                                    .FontSize(16).Bold().FontColor(Colors.Blue.Medium);
-                                col.Item().Text(company.Address ?? "—")
-                                    .FontSize(9).FontColor(Colors.Grey.Darken2);
-                                col.Item().Text($"Phone: {company.ContactNo} | Email: {company.Email}")
-                                    .FontSize(9).FontColor(Colors.Grey.Darken1);
-                            });
+                            h.Item().Text(company.CompanyName.ToUpper())
+                                .FontSize(18).Bold().FontColor("#ffffff");
 
-                            // Company Logo
-                            row.ConstantColumn(80).AlignRight().AlignMiddle().Element(e =>
-                            {
-                                var logoPath = string.IsNullOrWhiteSpace(company.CompanyLogo)
-                                    ? null
-                                    : Path.Combine("Documents", company.CompanyLogo);
+                            h.Item().Text(company.Address ?? "")
+                                .FontSize(9).FontColor("#ffffff");
 
-                                if (!string.IsNullOrWhiteSpace(logoPath) && File.Exists(logoPath))
-                                    e.Image(logoPath, ImageScaling.FitArea);
-                                else
-                                    e.Border(1).BorderColor(Colors.Grey.Lighten2)
-                                     .AlignCenter().AlignMiddle().Height(50)
-                                     .Text("No Logo").FontSize(8).FontColor(Colors.Grey.Medium);
-                            });
+                            h.Item().Text($"MOBILE: {company.ContactNo}   EMAIL: {company.Email}")
+                                .FontSize(9).FontColor("#ffffff");
                         });
 
-                        header.Item().PaddingVertical(5).LineHorizontal(1);
+                        col.Item().PaddingTop(5).AlignCenter()
+                            .Text("INVOICE").FontSize(14).Bold();
                     });
 
-                    // --- Content Section ---
+                    // ---------------- CUSTOMER INFO BOX ----------------
                     page.Content().Column(content =>
                     {
-                        content.Spacing(10);
+                        // 3 Column box
+                        content.Item().Table(t =>
+                        {
+                            t.ColumnsDefinition(c =>
+                            {
+                                c.RelativeColumn(2);
+                                c.RelativeColumn(2);
+                                c.RelativeColumn(1);
+                            });
 
-                        // Invoice title + Date
-                        content.Item().Text("INVOICE / RECEIPT")
-                            .FontSize(14).Bold().AlignCenter().FontColor(Colors.Black);
-                        content.Item().AlignRight().Text($"Date: {DateTime.Now:dd-MM-yyyy HH:mm}")
-                            .FontSize(9).FontColor(Colors.Grey.Darken1);
+                            // Row 1
+                            t.Cell().Border(1).Padding(5).Text($"COSTUMER NAME\n{customer.CustomerName}").Bold();
+                            t.Cell().Border(1).Padding(5).Text($"INVOICE DATE\n{DateTime.Now}").Bold();
+                            t.Cell().Border(1).Padding(5).Text($"INVOICE NO.\n{customer.invoiceno}").Bold();
+                        });
 
-                        // Customer Info
-                        content.Item().PaddingVertical(10).Text("Customer Information")
-                            .FontSize(11).Bold().FontColor(Colors.Blue.Medium);
+                        content.Item().PaddingVertical(8);
 
+                        // ---------------- SALE DETAILS TABLE ----------------
+                        // ---------------- SALE DETAILS TABLE ----------------
                         content.Item().Table(table =>
                         {
                             table.ColumnsDefinition(c =>
                             {
-                                c.RelativeColumn(2);
-                                c.RelativeColumn(4);
+                                c.ConstantColumn(30);     // Sr No
+                                c.RelativeColumn(4);      // Description
+                                c.RelativeColumn(2);      // Qty
+                                c.RelativeColumn(2);      // Amount
+                                c.RelativeColumn(2);      // Total
                             });
 
-                            void AddRow(string label, string? value)
+                            // Header row
+                            table.Header(h =>
                             {
-                                table.Cell().Element(CellLabel).Text(label).Bold();
-                                table.Cell().Element(CellValue).Text(value ?? "N/A");
-                            }
-
-                            static IContainer CellLabel(IContainer container) =>
-                                container.PaddingVertical(2).PaddingLeft(5);
-                            static IContainer CellValue(IContainer container) =>
-                                container.PaddingVertical(2);
-
-                            AddRow("Name:", customer.CustomerName);
-                            AddRow("Phone:", customer.PhoneNo);
-                            AddRow("Email:", customer.Email);
-                            AddRow("Payment Mode:", customer.PaymentMode);
-                        });
-
-                        // --- Sale Details Table ---
-                        content.Item().PaddingTop(10).Table(table =>
-                        {
-                            table.ColumnsDefinition(columns =>
-                            {
-                                columns.RelativeColumn(3); // Product
-                                columns.RelativeColumn(1); // Qty
-                                columns.RelativeColumn(1.5f); // Price
-                                columns.RelativeColumn(1.5f); // Discount
-                                columns.RelativeColumn(1.5f); // Tax
-                                columns.RelativeColumn(1.5f); // Total
+                                HeaderCell(h, "NO.");
+                                HeaderCell(h, "DESCRIPTION OF GOODS");
+                                HeaderCell(h, "QUANTITY");
+                                HeaderCell(h, "AMOUNT");
+                                HeaderCell(h, "TOTAL AMOUNT");
                             });
 
-                            // Header
-                            table.Header(header =>
-                            {
-                                string HeaderStyle = Colors.Blue.Medium;
+                            int index = 1;
 
-                                header.Cell().Element(CellHeader).Text("Product");
-                                header.Cell().Element(CellHeader).Text("Qty");
-                                header.Cell().Element(CellHeader).Text("Price");
-                                header.Cell().Element(CellHeader).Text("Discount");
-                                header.Cell().Element(CellHeader).Text("Tax");
-                                header.Cell().Element(CellHeader).Text("Total");
-
-                                static IContainer CellHeader(IContainer container) =>
-                                    container.Background(Colors.Blue.Medium)
-                                             .Padding(5)
-                                             .AlignCenter()
-                                             .DefaultTextStyle(TextStyle.Default.FontColor(Colors.White).Bold());
-                            });
-
-                            // Rows (with alternate shading)
-                            bool alternate = false;
                             foreach (var d in details)
                             {
-                                var bg = alternate ? Colors.Grey.Lighten4 : Colors.White;
-                                alternate = !alternate;
-
-                                table.Cell().Element(c => RowCell(c, bg)).Text(d.ProductName);
-                                table.Cell().Element(c => RowCell(c, bg)).AlignCenter().Text(d.Quantity.ToString());
-                                table.Cell().Element(c => RowCell(c, bg)).AlignRight().Text($"₹{d.Price:N2}");
-                                table.Cell().Element(c => RowCell(c, bg)).AlignRight().Text($"₹{d.TotalDiscount:N2}");
-                                table.Cell().Element(c => RowCell(c, bg)).AlignRight().Text($"₹{d.Tax:N2}");
-                                table.Cell().Element(c => RowCell(c, bg)).AlignRight().Text($"₹{d.TotalAmount:N2}");
+                                table.Cell().Border(1).Padding(4).AlignCenter().Text(index.ToString());
+                                table.Cell().Border(1).Padding(4).Text(d.ProductName);
+                                table.Cell().Border(1).Padding(4).AlignCenter().Text(d.Quantity.ToString());
+                                table.Cell().Border(1).Padding(4).AlignCenter().Text(d.Price.ToString("N2"));
+                                table.Cell().Border(1).Padding(4).AlignCenter().Text(d.TotalAmount.ToString("N2"));
+                                index++;
                             }
 
-                            static IContainer RowCell(IContainer container, string bg) =>
-                                container.Background(bg)
-                                         .Padding(5)
-                                         .BorderBottom(1)
-                                         .BorderColor(Colors.Grey.Lighten2)
-                                         .DefaultTextStyle(TextStyle.Default.FontSize(10));
+                            // ---- ADD MINIMUM 3 EMPTY ROWS ----
+                            int blankRows = Math.Max(0, 3 - details.Count);
 
-                            // --- Extra Charges ---
-                            if (extracharges != null && extracharges.Any())
+                            for (int i = 0; i < blankRows; i++)
                             {
-                                table.Cell().ColumnSpan(6).PaddingTop(8);
-                                table.Cell().ColumnSpan(6)
-                                    .Element(c => c.Background(Colors.Grey.Lighten3).Padding(5))
-                                    .Text("Additional Charges")
-                                    .FontColor(Colors.Blue.Darken2)
-                                    .Bold();
-
-                                foreach (var e in extracharges)
-                                {
-                                    table.Cell().ColumnSpan(4).Element(c => RowCell(c, Colors.White))
-                                        .Text($"• {e.chargename}");
-                                    table.Cell().ColumnSpan(2).Element(c => RowCell(c, Colors.White))
-                                        .AlignRight().Text($"₹{e.chargeamount:N2}");
-                                }
+                                table.Cell().Border(1).Padding(4).AlignCenter().Text("");
+                                table.Cell().Border(1).Padding(4).Text("");
+                                table.Cell().Border(1).Padding(4).AlignCenter().Text("");
+                                table.Cell().Border(1).Padding(4).AlignCenter().Text("");
+                                table.Cell().Border(1).Padding(4).AlignCenter().Text("");
                             }
 
-                            // --- Subtotal, Extra, and Grand Total ---
-                            void AddSummaryRow(string label, decimal value, bool highlight = false)
-                            {
-                                table.Cell().ColumnSpan(4);
-                                table.Cell().ColumnSpan(2)
-                                    .Element(c => c.Background(highlight ? Colors.Grey.Lighten3 : Colors.White)
-                                                 .Padding(5)
-                                                 .AlignRight())
-                                    .Text($"{label} ₹{value:N2}")
-                                    .Bold();
-                            }
+                            // -------- TOTAL QUANTITY ROW --------
+                            table.Cell().Border(1).Padding(4).AlignCenter().Text("1");
+                            table.Cell().Border(1).Padding(4).Text("TOTAL QUANTITY").Bold();
+                            table.Cell().Border(1).Padding(4).Text("");
+                            table.Cell().Border(1).Padding(4).Text("BARDANA").Bold();
+                            table.Cell().Border(1).Padding(4).Text("");
 
-                            AddSummaryRow("Subtotal:", subTotal);
-                            if (extraTotal > 0)
-                                AddSummaryRow("Extra Charges:", extraTotal);
-                            AddSummaryRow("Grand Total:", grandTotal, true);
-
-                            // --- Paid & Balance Info ---
-                            table.Cell().ColumnSpan(4);
-                            table.Cell().ColumnSpan(2)
-                                .Element(c => c.PaddingTop(8).AlignRight())
-                                .Text($"Paid Amount: ₹{customer.paidamt:N2}\nBalance Due: ₹{customer.baldue:N2}")
-                                .FontSize(10)
-                                .Bold();
+                            // -------- GRAND TOTAL ROW --------
+                            table.Cell().ColumnSpan(4).Border(1).Padding(5).AlignRight().Text("GRAND TOTAL").Bold();
+                            table.Cell().Border(1).Padding(5).AlignCenter().Text(grandTotal.ToString("N2")).Bold();
                         });
+
                     });
 
-                    // --- Footer Section ---
-                    page.Footer().AlignCenter()
-                        .PaddingTop(10)
-                        .Text("Thank you for your business!")
-                        .FontColor(Colors.Grey.Darken1);
+                    page.Footer().AlignCenter().PaddingTop(10)
+                        .Text("Thank you for your business!").FontSize(9);
                 });
             });
 
+            // helper
+           
             return document.GeneratePdf();
+        }
+
+        static void HeaderCell(QuestPDF.Fluent.TableCellDescriptor h, string text)
+        {
+            h.Cell().Background("#e6e6e6").Border(1).Padding(5)
+                .Text(text).Bold().AlignCenter();
         }
 
         #endregion

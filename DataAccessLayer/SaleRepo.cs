@@ -168,11 +168,14 @@ namespace FLEXIERP.DataAccessLayer
                 // 2️⃣ Insert Sale
                 using var insertSaleCmd = connection.CreateCommand();
                 insertSaleCmd.Transaction = transaction;
+
                 insertSaleCmd.CommandText = @"
-            INSERT INTO Sale
-            (CustomerID, TotalItems, TotalAmount, TotalDiscount, OrderDate, CreatedBy, CreatedDate)
-            VALUES (@CustomerID, @TotalItems, @TotalAmount, @TotalDiscount, @OrderDate, @CreatedBy, @CreatedDate);
-            SELECT last_insert_rowid();";
+                INSERT INTO Sale
+                (CustomerID, TotalItems, TotalAmount, TotalDiscount, OrderDate, CreatedBy, CreatedDate, invoice_no)
+                VALUES 
+                (@CustomerID, @TotalItems, @TotalAmount, @TotalDiscount, @OrderDate, @CreatedBy, @CreatedDate, @InvoiceNo);
+                SELECT last_insert_rowid();
+                ";
 
                 insertSaleCmd.Parameters.AddWithValue("@CustomerID", sale.customerID);
                 insertSaleCmd.Parameters.AddWithValue("@TotalItems", sale.TotalItems);
@@ -181,8 +184,10 @@ namespace FLEXIERP.DataAccessLayer
                 insertSaleCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
                 insertSaleCmd.Parameters.AddWithValue("@CreatedDate", DateTime.Now);
                 insertSaleCmd.Parameters.AddWithValue("@OrderDate", DateTime.Now);
+                insertSaleCmd.Parameters.AddWithValue("@InvoiceNo", sale.invoiceno);
 
                 saleId = Convert.ToInt32(await insertSaleCmd.ExecuteScalarAsync());
+
 
                 // 3️⃣ Insert SaleDetails
                 foreach (var detail in sale.SaleDetails)
@@ -198,7 +203,7 @@ namespace FLEXIERP.DataAccessLayer
                     insertDetailCmd.Parameters.AddWithValue("@ProductID", detail.ProductID);
                     insertDetailCmd.Parameters.AddWithValue("@CreatedBy", (object?)sale.CreatedBy ?? DBNull.Value);
                     insertDetailCmd.Parameters.AddWithValue("@Quantity", (object?)detail.productquantity ?? DBNull.Value);
-                    insertDetailCmd.Parameters.AddWithValue("@CreatedDate",DateTime.Now );
+                    insertDetailCmd.Parameters.AddWithValue("@CreatedDate", DateTime.Now);
 
                     await insertDetailCmd.ExecuteNonQueryAsync();
                 }
@@ -625,7 +630,8 @@ LIMIT @PageSize OFFSET @Offset;
                     ROUND(sale.TotalAmount, 2) AS TotalAmount,
                     ROUND(sale.TotalDiscount, 2) AS TotalDiscount,
                     IFNULL(cl.paid_amt, 0) AS paid_amt,
-                    IFNULL(cl.Balance_Due, 0) AS Balance_Due
+                    IFNULL(cl.Balance_Due, 0) AS Balance_Due,
+	                sale.invoice_no
                 FROM Sale AS sale
                 LEFT JOIN Customer AS cs ON sale.CustomerID = cs.CustomerID
                 LEFT JOIN Customer_ledger AS cl 
@@ -651,7 +657,8 @@ LIMIT @PageSize OFFSET @Offset;
                             TotalAmount = Convert.ToDecimal(reader["TotalAmount"] ?? 0),
                             TotalDiscount = Convert.ToDecimal(reader["TotalDiscount"] ?? 0),
                             paidamt = Convert.ToDecimal(reader["paid_amt"] ?? 0),
-                            baldue = Convert.ToDecimal(reader["Balance_Due"] ?? 0)
+                            baldue = Convert.ToDecimal(reader["Balance_Due"] ?? 0),
+                            invoiceno = reader["invoice_no"].ToString() ?? null
                         };
                     }
                 }

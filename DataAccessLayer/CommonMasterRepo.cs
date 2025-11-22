@@ -25,6 +25,91 @@ namespace FLEXIERP.DataAccessLayer
             _httpContextAccessor = httpContextAccessor;
         }
 
+        #region Number System
+        public async Task<string> GetInvoiceNumber()
+        {
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                string prefix = "";
+                int lastInvoice = 0;
+
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.Transaction = transaction;
+                    cmd.CommandText = @"SELECT prefix, last_invoice_number 
+                                FROM InvoiceNumberSystem 
+                                WHERE id = 1;";
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        prefix = reader["prefix"]?.ToString() ?? "";
+                        lastInvoice = Convert.ToInt32(reader["last_invoice_number"]);
+                    }
+                    else
+                    {
+                        throw new Exception("InvoiceNumberSystem table not initialized.");
+                    }
+                }
+
+                // build invoice number ex: 2025/1
+                string invoiceNo = $"{prefix}{lastInvoice}";
+
+                transaction.Commit();
+                return invoiceNo;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public async Task<int> UpdateInvoiceNumber(int updatedBy)
+        {
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                int rowsAffected = 0;
+
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+
+                cmd.CommandText = @"
+                    UPDATE InvoiceNumberSystem
+                    SET 
+                        last_invoice_number = last_invoice_number + 1,
+                        updated_at = CURRENT_TIMESTAMP,
+                        updated_by = @updated_by
+                    WHERE id = 1;
+
+                    SELECT changes();
+                    ";
+
+                cmd.Parameters.AddWithValue("@updated_by", updatedBy);
+
+                var result = await cmd.ExecuteScalarAsync();
+                rowsAffected = Convert.ToInt32(result);
+
+                transaction.Commit();
+                return rowsAffected;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        #endregion
+
         #region payment methods
         public async Task<int> SaveChequePaymentAsync(SaveChequePaymentDto chequePayment)
         {
