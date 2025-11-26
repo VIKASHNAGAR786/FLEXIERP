@@ -277,5 +277,20 @@ namespace FLEXIERP.BusinessLayer
         }
         #endregion
 
+        #region Formate Editor
+        public async Task<List<TemplateOption>> GetTemplates()
+        {
+            return await this.commonmaster.GetTemplates();
+        }
+        public async Task<int> SaveTemplateAsync(SaveTemplate template)
+        {
+            return await this.commonmaster.SaveTemplateAsync(template);
+        }
+        public async Task<TemplateData?> GetTemplateAsync(int categoryId, int isDefault)
+        {
+            return await this.commonmaster.GetTemplateAsync(categoryId, isDefault);
+        }
+        #endregion
+
     }
 }

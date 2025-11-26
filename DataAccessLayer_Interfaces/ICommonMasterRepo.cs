@@ -32,5 +32,11 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<int> SaveCompanyBankAccounts(SaveCompanyBankAccounts bankAccounts);
         public Task<CompanyBankAccountDto> GetCompanyBankAccounts();
         #endregion
+
+        #region Formate Editor
+        public Task<List<TemplateOption>> GetTemplates();
+        public Task<int> SaveTemplateAsync(SaveTemplate template);
+        public Task<TemplateData?> GetTemplateAsync(int categoryId, int isDefault);
+        #endregion
     }
 }

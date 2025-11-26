@@ -273,4 +273,19 @@
         public int status { get; set; }
         public string? created_at { get; set; }
     }
+    public record TemplateOption
+    {
+        public int? id { get; set; }       // e.g. 1, 2, 3
+        public string? key { get; set; }   // e.g. "receipt", "order", "purchase"
+        public string? name { get; set; }  // e.g. "Receipt", "Order", "Purchase"
+    }
+
+    public class TemplateData
+    {
+        public string? htmlcontent { get; set; }
+        public string? csscontent { get; set; }
+        public string? jscontent { get; set; }
+        public string? schemajson { get; set; }
+        public int? isdefault { get; set; }
+    }
 }

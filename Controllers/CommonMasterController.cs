@@ -1,5 +1,6 @@
 ﻿using FLEXIERP.BusinesLayer_Interfaces;
 using FLEXIERP.BusinessLayer;
+using FLEXIERP.DTOs;
 using FLEXIERP.MODELS;
 using FLEXIERP.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -211,6 +212,65 @@ namespace FLEXIERP.Controllers
                     return Unauthorized("User ID not found in token.");
 
                 var result = await commonservice.GetCompanyBankAccounts();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
+        #region Formate Editor
+        [HttpGet("GetTemplates")]
+        public async Task<IActionResult> GetTemplates()
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                List<TemplateOption> result = await commonservice.GetTemplates();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPost("SaveTemplateAsync")]
+        public async Task<ActionResult<int>> SaveTemplateAsync([FromBody] SaveTemplate template)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                template.createdby = (int)userid!;
+                template.updatedby = (int)userid!;
+
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                var result = await commonservice.SaveTemplateAsync(template);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetTemplateAsync")]
+        public async Task<IActionResult> GetTemplateAsync([FromQuery] int categorid, int isdefault)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var result = await commonservice.GetTemplateAsync(categorid, isdefault);
                 return Ok(result);
             }
             catch (Exception ex)

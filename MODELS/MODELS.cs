@@ -355,4 +355,22 @@ namespace FLEXIERP.MODELS
 
     }
 
+    public class SaveTemplate
+    {
+        public int? id { get; set; }              // Primary key, nullable for insert
+        public int categoryid { get; set; }       // Required
+        public string name { get; set; } = "";    // Required
+        public string? description { get; set; }
+        public string htmlcontent { get; set; } = ""; // Required
+        public string? csscontent { get; set; }
+        public string? jscontent { get; set; }
+        public string? schemajson { get; set; }
+        public bool isdefault { get; set; }       // 0 or 1
+        public int? createdby { get; set; }
+        public int? updatedby { get; set; }
+        public DateTime createdat { get; set; } = DateTime.Now;
+        public DateTime updatedat { get; set; } = DateTime.Now;
+        public int version { get; set; } = 1;
+    }
+
 }

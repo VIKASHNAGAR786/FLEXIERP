@@ -398,22 +398,31 @@ namespace FLEXIERP.BusinessLayer
                             }
 
                             // ---- ADD MINIMUM 3 EMPTY ROWS ----
-                            int blankRows = Math.Max(0, 3 - details.Count);
+                            int blankRows = Math.Max(0, 8 - details.Count);
 
                             for (int i = 0; i < blankRows; i++)
                             {
-                                table.Cell().Border(1).Padding(4).AlignCenter().Text("");
-                                table.Cell().Border(1).Padding(4).Text("");
-                                table.Cell().Border(1).Padding(4).AlignCenter().Text("");
-                                table.Cell().Border(1).Padding(4).AlignCenter().Text("");
-                                table.Cell().Border(1).Padding(4).AlignCenter().Text("");
+                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
+                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
+                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
+                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
+                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
                             }
-
-                            // -------- TOTAL QUANTITY ROW --------
-                            table.Cell().Border(1).Padding(4).AlignCenter().Text("1");
+                            if (extracharges is not null)
+                            {
+                                foreach (var charges in extracharges)
+                                {
+                                    table.Cell().Border(1).Padding(4).AlignCenter().Text("");
+                                    table.Cell().Border(1).Padding(4).Text("").Bold();
+                                    table.Cell().Border(1).Padding(4).Text("");
+                                    table.Cell().Border(1).Padding(4).Text(charges.chargename).Bold();
+                                    table.Cell().Border(1).Padding(4).AlignCenter().Text(@$"{charges.chargeamount.ToString()}");
+                                }
+                            }
+                            table.Cell().Border(1).Padding(4).AlignCenter().Text("");
                             table.Cell().Border(1).Padding(4).Text("TOTAL QUANTITY").Bold();
                             table.Cell().Border(1).Padding(4).Text("");
-                            table.Cell().Border(1).Padding(4).Text("BARDANA").Bold();
+                            table.Cell().Border(1).Padding(4).Text("").Bold();
                             table.Cell().Border(1).Padding(4).Text("");
 
                             // -------- GRAND TOTAL ROW --------

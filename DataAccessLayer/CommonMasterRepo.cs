@@ -884,5 +884,135 @@ SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_updated;
             }
         }
         #endregion
+
+        #region Formate Editor
+        public async Task<List<TemplateOption>> GetTemplates()
+        {
+            var templates = new List<TemplateOption>
+    {
+        new TemplateOption { id = 1, key = "receipt",  name = "Receipt" },
+        new TemplateOption { id = 2, key = "orderreceipt", name = "Order" },
+        new TemplateOption { id = 3, key = "purchase", name = "Purchase" }
+    };
+
+            return await Task.FromResult(templates);
+        }
+
+        public async Task<int> SaveTemplateAsync(SaveTemplate template)
+        {
+            int insertedId = 0;
+
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
+            -- Case 1 & 2: Insert
+INSERT INTO TemplateMaster (
+    Id, CategoryId, Name, Description, HtmlContent, CssContent, JsContent, SchemaJson,
+    IsDefault, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, Version
+)
+SELECT 
+    NULLIF(@Id, 0), @CategoryId, @Name, @Description, @HtmlContent, @CssContent, @JsContent, @SchemaJson,
+    CASE 
+        WHEN NOT EXISTS (SELECT 1 FROM TemplateMaster WHERE CategoryId = @CategoryId) 
+            THEN 1   -- First row for category → default
+        WHEN EXISTS (SELECT 1 FROM TemplateMaster WHERE CategoryId = @CategoryId AND IsDefault = 1) 
+            THEN 0   -- Default already exists → insert non-default
+    END,
+    @CreatedBy, @UpdatedBy, @CreatedAt, @UpdatedAt, @Version
+WHERE NOT EXISTS (
+    -- Prevent insert if a non-default already exists → we’ll update instead
+    SELECT 1 FROM TemplateMaster WHERE CategoryId = @CategoryId AND IsDefault = 0
+);
+
+-- Case 3: Update existing non-default row
+UPDATE TemplateMaster
+SET Name = @Name,
+    Description = @Description,
+    HtmlContent = @HtmlContent,
+    CssContent = @CssContent,
+    JsContent = @JsContent,
+    SchemaJson = @SchemaJson,
+    UpdatedBy = @UpdatedBy,
+    UpdatedAt = @UpdatedAt,
+    Version = @Version
+WHERE CategoryId = @CategoryId AND IsDefault = 0;
+
+SELECT last_insert_rowid();
+        ";
+
+                // Parameters
+                cmd.Parameters.AddWithValue("@Id", (object?)template.id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@CategoryId", template.categoryid);
+                cmd.Parameters.AddWithValue("@Name", (object?)template.name ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Description", (object?)template.description ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@HtmlContent", (object?)template.htmlcontent ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@CssContent", (object?)template.csscontent ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@JsContent", (object?)template.jscontent ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@SchemaJson", (object?)template.schemajson ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@IsDefault", template.isdefault ? 1 : 0);
+                cmd.Parameters.AddWithValue("@CreatedBy", (object?)template.createdby ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@UpdatedBy", (object?)template.updatedby ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@CreatedAt", template.createdat);
+                cmd.Parameters.AddWithValue("@UpdatedAt", template.updatedat);
+                cmd.Parameters.AddWithValue("@Version", template.version);
+
+                // Execute and get the inserted ID
+                var result = await cmd.ExecuteScalarAsync();
+                insertedId = result != null ? Convert.ToInt32(result) : 0;
+
+                transaction.Commit();
+                return insertedId;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+
+        public async Task<TemplateData?> GetTemplateAsync(int categoryId, int isDefault)
+        {
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+        SELECT HtmlContent, CssContent, JsContent, SchemaJson, IsDefault
+        FROM TemplateMaster
+        WHERE CategoryId = @CategoryId AND IsDefault = @IsDefault
+        LIMIT 1;
+    ";
+
+            cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+            cmd.Parameters.AddWithValue("@IsDefault", isDefault);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return new TemplateData
+                {
+                    // numbering (ordinal index)
+                    htmlcontent = reader.IsDBNull(0) ? null : reader.GetString(0),   // HtmlContent
+                    csscontent = reader.IsDBNull(1) ? null : reader.GetString(1),   // CssContent
+                    jscontent = reader.IsDBNull(2) ? null : reader.GetString(2),   // JsContent
+                    schemajson = reader.IsDBNull(3) ? null : reader.GetString(3),   // SchemaJson
+                    isdefault = reader.GetInt32(4)                                 // IsDefault
+                };
+
+            }
+
+            return null; // no row found
+        }
+        #endregion
     }
 }
