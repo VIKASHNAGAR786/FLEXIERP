@@ -27,5 +27,10 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         public Task<int> DeleteNotesById(int deletednotsid);
         public Task<int> MarkPinned(int notesid);
         #endregion
+
+        #region Bank Accounts
+        public Task<int> SaveCompanyBankAccounts(SaveCompanyBankAccounts bankAccounts);
+        public Task<CompanyBankAccountDto> GetCompanyBankAccounts();
+        #endregion
     }
 }

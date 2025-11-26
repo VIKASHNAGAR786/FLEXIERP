@@ -266,5 +266,16 @@ namespace FLEXIERP.BusinessLayer
         }
         #endregion
 
+        #region Bank Accounts
+        public async Task<int> SaveCompanyBankAccounts(SaveCompanyBankAccounts bankAccounts)
+        {
+            return await this.commonmaster.SaveCompanyBankAccounts(bankAccounts);
+        }
+        public async Task<CompanyBankAccountDto> GetCompanyBankAccounts()
+        {
+            return await this.commonmaster.GetCompanyBankAccounts();
+        }
+        #endregion
+
     }
 }

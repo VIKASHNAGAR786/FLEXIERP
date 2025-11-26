@@ -259,4 +259,18 @@
         public int? totalrecords { get; set; }
     }
 
+    public class CompanyBankAccountDto
+    {
+        public int company_bank_id { get; set; }
+        public string? account_name { get; set; }
+        public string? bank_name { get; set; }
+        public string? account_number { get; set; }
+        public string? ifsc_code { get; set; }
+        public string? branch_name { get; set; }
+        public string? account_type { get; set; }
+        public int created_by { get; set; }
+        public string? created_by_name { get; set; }
+        public int status { get; set; }
+        public string? created_at { get; set; }
+    }
 }

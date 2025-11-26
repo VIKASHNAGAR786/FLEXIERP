@@ -297,7 +297,7 @@ namespace FLEXIERP.MODELS
     }
 
 
-public class SaveNotes
+    public class SaveNotes
     {
         [JsonPropertyName("title")]
         public required string Title { get; set; }
@@ -329,6 +329,30 @@ public class SaveNotes
         public SaveChequePaymentDto? chequepayment { get; set; } // optional cheque details
         public int? payid { get; set; } // optional cheque details
         public int? createby { get; set; } // optional cheque details
+    }
+
+    public class SaveCompanyBankAccounts
+    {
+        [JsonPropertyName("accountname")]
+        public required string accountname { get; set; }
+
+        [JsonPropertyName("bankname")]
+        public required string bankname { get; set; }
+
+        [JsonPropertyName("accountnumber")]
+        public required string accountnumber { get; set; }
+
+        [JsonPropertyName("ifsccode")]
+        public required string ifsccode { get; set; }
+
+        [JsonPropertyName("branchname")]
+        public string? branchname { get; set; }
+
+        [JsonPropertyName("accounttype")]
+        public string? accounttype { get; set; } = "CURRENT";
+
+        public int? CreateBy { get; set; }
+
     }
 
 }

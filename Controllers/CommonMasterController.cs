@@ -180,5 +180,44 @@ namespace FLEXIERP.Controllers
             }
         }
         #endregion
+
+        #region Bank Accounts
+        [HttpPost("SaveCompanyBankAccounts")]
+        public async Task<ActionResult<int>> SaveCompanyBankAccounts([FromBody] SaveCompanyBankAccounts bankAccounts)
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                bankAccounts.CreateBy = (int)userid!;
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+                var result = await commonservice.SaveCompanyBankAccounts(bankAccounts);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log ex.Message if needed
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("GetCompanyBankAccounts")]
+        public async Task<IActionResult> GetCompanyBankAccounts()
+        {
+            try
+            {
+                int? userid = User.GetUserId();
+                if (userid == null)
+                    return Unauthorized("User ID not found in token.");
+
+                var result = await commonservice.GetCompanyBankAccounts();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
     }
 }

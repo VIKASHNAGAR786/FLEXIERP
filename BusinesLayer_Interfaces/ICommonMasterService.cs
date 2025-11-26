@@ -18,5 +18,10 @@ namespace FLEXIERP.BusinesLayer_Interfaces
         public Task<int> MarkPinned(int notesid);
         #endregion
 
+        #region Bank Accounts
+        public Task<int> SaveCompanyBankAccounts(SaveCompanyBankAccounts bankAccounts);
+        public Task<CompanyBankAccountDto> GetCompanyBankAccounts();
+        #endregion
+
     }
 }

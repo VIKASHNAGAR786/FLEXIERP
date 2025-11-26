@@ -775,5 +775,114 @@ SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_updated;
         }
 
         #endregion
+
+        #region Bank Accounts
+        public async Task<int> SaveCompanyBankAccounts(SaveCompanyBankAccounts bankAccounts)
+        {
+            int insertedId = 0;
+
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
+                                INSERT INTO CompanyBankAccounts
+                        (account_name, bank_name, account_number, ifsc_code, branch_name,
+                         account_type, created_by, updated_by)
+                        VALUES
+                        (@account_name, @bank_name, @account_number, @ifsc_code, @branch_name,
+                         @account_type, @created_by, @updated_by)";
+
+                // Parameters
+                cmd.Parameters.AddWithValue("@account_name", bankAccounts.accountname);
+                cmd.Parameters.AddWithValue("@bank_name", bankAccounts.bankname);
+                cmd.Parameters.AddWithValue("@account_number", bankAccounts.accountnumber);
+                cmd.Parameters.AddWithValue("@ifsc_code", bankAccounts.ifsccode);
+                cmd.Parameters.AddWithValue("@branch_name", bankAccounts.branchname);
+                cmd.Parameters.AddWithValue("@account_type", bankAccounts.accounttype);
+                cmd.Parameters.AddWithValue("@CreatedBy", bankAccounts.CreateBy);
+                cmd.Parameters.AddWithValue("@UpdatedBy", bankAccounts.CreateBy);
+
+                // Execute and get the inserted ID
+                var result = await cmd.ExecuteScalarAsync();
+                insertedId = result != null ? Convert.ToInt32(result) : 0;
+
+                transaction.Commit();
+                return insertedId;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+
+        public async Task<CompanyBankAccountDto> GetCompanyBankAccounts()
+        {
+            var connection = sqlConnection.GetConnection();
+
+            try
+            {
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT 
+                            c.company_bank_id,
+                            c.account_name,
+                            c.bank_name,
+                            c.account_number,
+                            c.ifsc_code,
+                            c.branch_name,
+                            c.account_type,
+                            c.created_by,
+                            u.username AS created_by_name,
+                            c.status,
+                            CONVERT(VARCHAR, c.created_at, 120) AS created_at
+                        FROM CompanyBankAccounts c
+                        LEFT JOIN Tbl_Users u ON u.userid = c.created_by
+                        WHERE c.status = 1
+                    ";
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var note = new CompanyBankAccountDto
+                    {
+                        company_bank_id = reader.GetInt32(0),
+                        account_name = reader.GetString(1),
+                        bank_name = reader.GetString(2),
+                        account_number = reader.IsDBNull(3) ? null : reader.GetString(3),
+                        ifsc_code = reader.GetString(4),
+                        branch_name = reader.GetString(5),
+                        account_type = reader.GetString(6),
+                        created_by = reader.GetInt32(7),
+                        created_by_name = reader.GetString(8),
+                        status = reader.GetInt32(9),
+                        created_at = reader.GetString(10),
+                    };
+                    return note;
+                }
+
+                return new CompanyBankAccountDto();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error retrieving note details", ex);
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+        #endregion
     }
 }
