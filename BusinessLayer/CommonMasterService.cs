@@ -271,7 +271,7 @@ namespace FLEXIERP.BusinessLayer
         {
             return await this.commonmaster.SaveCompanyBankAccounts(bankAccounts);
         }
-        public async Task<CompanyBankAccountDto> GetCompanyBankAccounts()
+        public async Task<IEnumerable<CompanyBankAccountDto>> GetCompanyBankAccounts()
         {
             return await this.commonmaster.GetCompanyBankAccounts();
         }

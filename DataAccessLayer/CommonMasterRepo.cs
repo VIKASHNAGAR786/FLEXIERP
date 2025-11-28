@@ -197,6 +197,109 @@ namespace FLEXIERP.DataAccessLayer
             }
         }
 
+        public async Task<int> SaveBankTransferPaymentAsync(SaveBankTransferPaymentDto payment)
+        {
+            int insertedId = 0;
+
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.Transaction = transaction;
+                cmd.CommandText = @"
+            INSERT INTO BankTransferPayments
+            (
+                company_bank_id,
+                transfer_type,
+                amount,
+                currency,
+                charges,
+                final_amount_received,
+                transaction_date,
+                received_date,
+                posted_date,
+                status,
+                is_reconciled,
+                reconciliation_date,
+                customer_bank_name,
+                customer_account_number,
+                customer_ifsc,
+                customer_branch,
+                utr_number,
+                reference_number,
+                payment_description,
+                remarks,
+                create_by
+            )
+            VALUES
+            (
+                @company_bank_id,
+                @transfer_type,
+                @amount,
+                @currency,
+                @charges,
+                @final_amount_received,
+                @transaction_date,
+                @received_date,
+                @posted_date,
+                @status,
+                @is_reconciled,
+                @reconciliation_date,
+                @customer_bank_name,
+                @customer_account_number,
+                @customer_ifsc,
+                @customer_branch,
+                @utr_number,
+                @reference_number,
+                @payment_description,
+                @remarks,
+                @create_by
+            );
+            SELECT last_insert_rowid();";
+
+                // Parameters with explicit type and direction
+                cmd.Parameters.Add(new SqliteParameter("@company_bank_id", DbType.Int32) { Value = payment.company_bank_id });
+                cmd.Parameters.Add(new SqliteParameter("@transfer_type", DbType.String) { Value = payment.transfer_type });
+                cmd.Parameters.Add(new SqliteParameter("@amount", DbType.Decimal) { Value = payment.amount });
+                cmd.Parameters.Add(new SqliteParameter("@currency", DbType.String) { Value = string.IsNullOrEmpty(payment.currency) ? "INR" : payment.currency });
+                cmd.Parameters.Add(new SqliteParameter("@charges", DbType.Decimal) { Value = payment.charges ?? 0 });
+                cmd.Parameters.Add(new SqliteParameter("@final_amount_received", DbType.Decimal) { Value = (object?)payment.final_amount_received ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@transaction_date", DbType.DateTime) { Value = payment.transaction_date });
+                cmd.Parameters.Add(new SqliteParameter("@received_date", DbType.DateTime) { Value = (object?)payment.received_date ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@posted_date", DbType.DateTime) { Value = (object?)payment.posted_date ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@status", DbType.String) { Value = string.IsNullOrEmpty(payment.status) ? "Pending" : payment.status });
+                cmd.Parameters.Add(new SqliteParameter("@is_reconciled", DbType.Int32) { Value = payment.is_reconciled ? 1 : 0 });
+                cmd.Parameters.Add(new SqliteParameter("@reconciliation_date", DbType.DateTime) { Value = (object?)payment.reconciliation_date ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@customer_bank_name", DbType.String) { Value = (object?)payment.customer_bank_name ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@customer_account_number", DbType.String) { Value = (object?)payment.customer_account_number ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@customer_ifsc", DbType.String) { Value = (object?)payment.customer_ifsc ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@customer_branch", DbType.String) { Value = (object?)payment.customer_branch ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@utr_number", DbType.String) { Value = payment.utr_number });
+                cmd.Parameters.Add(new SqliteParameter("@reference_number", DbType.String) { Value = (object?)payment.reference_number ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@payment_description", DbType.String) { Value = (object?)payment.payment_description ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@remarks", DbType.String) { Value = (object?)payment.remarks ?? DBNull.Value });
+                cmd.Parameters.Add(new SqliteParameter("@create_by", DbType.Int32) { Value = payment.create_by });
+
+                // Execute and get the inserted ID
+                var result = await cmd.ExecuteScalarAsync();
+                insertedId = result != null ? Convert.ToInt32(result) : 0;
+
+                transaction.Commit();
+                return insertedId;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
         #endregion
 
         #region DashBoard
@@ -287,6 +390,7 @@ namespace FLEXIERP.DataAccessLayer
                                                     CASE 
                                                         WHEN cl.payment_mode = 1 THEN 'Cash'
                                                         WHEN cl.payment_mode = 2 THEN 'Cheque'
+                                                        WHEN cl.payment_mode = 3 THEN 'BANK TRANSFER'
                                                         ELSE 'Unknown'
                                                     END AS PaymentType,
                                                     cl.transaction_type
@@ -779,7 +883,7 @@ SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_updated;
         #region Bank Accounts
         public async Task<int> SaveCompanyBankAccounts(SaveCompanyBankAccounts bankAccounts)
         {
-            int insertedId = 0;
+            int affectedId = 0;
 
             using var connection = sqlConnection.GetConnection();
             await connection.OpenAsync();
@@ -789,30 +893,71 @@ SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_updated;
             {
                 using var cmd = connection.CreateCommand();
                 cmd.Transaction = transaction;
-                cmd.CommandText = @"
-                                INSERT INTO CompanyBankAccounts
-                        (account_name, bank_name, account_number, ifsc_code, branch_name,
-                         account_type, created_by, updated_by)
-                        VALUES
-                        (@account_name, @bank_name, @account_number, @ifsc_code, @branch_name,
-                         @account_type, @created_by, @updated_by)";
+
+                if (bankAccounts.rowid == 0)
+                {
+                    // INSERT
+                    cmd.CommandText = @"
+                INSERT INTO CompanyBankAccounts (
+                    account_name, bank_name, account_number,
+                    ifsc_code, branch_name, account_type,
+                    create_by, create_at, use_on_print
+                )
+                VALUES (
+                    @account_name, @bank_name, @account_number,
+                    @ifsc_code, @branch_name, @account_type,
+                    @created_by, @create_at, @use_on_print
+                );
+                SELECT last_insert_rowid();";
+                }
+                else
+                {
+                    // UPDATE
+                    cmd.CommandText = @"
+                UPDATE CompanyBankAccounts
+                SET account_name   = COALESCE(@account_name, account_name),
+                    bank_name      = COALESCE(@bank_name, bank_name),
+                    account_number = COALESCE(@account_number, account_number),
+                    ifsc_code      = COALESCE(@ifsc_code, ifsc_code),
+                    branch_name    = COALESCE(@branch_name, branch_name),
+                    account_type   = COALESCE(@account_type, account_type),
+                    create_by      = COALESCE(@created_by, create_by),
+                    create_at      = COALESCE(@create_at, create_at),
+                    use_on_print   = COALESCE(@use_on_print, use_on_print)
+                WHERE company_bank_id = @company_bank_id;
+                SELECT @company_bank_id;";
+                }
 
                 // Parameters
-                cmd.Parameters.AddWithValue("@account_name", bankAccounts.accountname);
-                cmd.Parameters.AddWithValue("@bank_name", bankAccounts.bankname);
-                cmd.Parameters.AddWithValue("@account_number", bankAccounts.accountnumber);
-                cmd.Parameters.AddWithValue("@ifsc_code", bankAccounts.ifsccode);
-                cmd.Parameters.AddWithValue("@branch_name", bankAccounts.branchname);
-                cmd.Parameters.AddWithValue("@account_type", bankAccounts.accounttype);
-                cmd.Parameters.AddWithValue("@CreatedBy", bankAccounts.CreateBy);
-                cmd.Parameters.AddWithValue("@UpdatedBy", bankAccounts.CreateBy);
+                cmd.Parameters.AddWithValue("@account_name", bankAccounts.accountname ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@bank_name", bankAccounts.bankname ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@account_number", bankAccounts.accountnumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@ifsc_code", bankAccounts.ifsccode ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@branch_name", bankAccounts.branchname ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@account_type", bankAccounts.accounttype ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@created_by", bankAccounts.CreateBy ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@create_at", DateTime.Now);
+                cmd.Parameters.AddWithValue("@company_bank_id", bankAccounts.rowid);
+                cmd.Parameters.AddWithValue("@use_on_print", bankAccounts.useonprint);
 
-                // Execute and get the inserted ID
                 var result = await cmd.ExecuteScalarAsync();
-                insertedId = result != null ? Convert.ToInt32(result) : 0;
+                affectedId = result != null ? Convert.ToInt32(result) : 0;
+
+                // 🔑 Reset other rows if this one is marked for print
+                if (bankAccounts.useonprint == 1)
+                {
+                    using var resetCmd = connection.CreateCommand();
+                    resetCmd.Transaction = transaction;
+                    resetCmd.CommandText = @"
+                UPDATE CompanyBankAccounts
+                SET use_on_print = 0
+                WHERE company_bank_id <> @company_bank_id;";
+                    resetCmd.Parameters.AddWithValue("@company_bank_id", affectedId);
+                    await resetCmd.ExecuteNonQueryAsync();
+                }
 
                 transaction.Commit();
-                return insertedId;
+                return affectedId;
             }
             catch
             {
@@ -824,36 +969,36 @@ SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_updated;
                 await connection.CloseAsync();
             }
         }
-
-        public async Task<CompanyBankAccountDto> GetCompanyBankAccounts()
+        public async Task<IEnumerable<CompanyBankAccountDto>> GetCompanyBankAccounts()
         {
             var connection = sqlConnection.GetConnection();
-
+            List<CompanyBankAccountDto> result = new List<CompanyBankAccountDto>();
             try
             {
                 await connection.OpenAsync();
 
                 using var cmd = connection.CreateCommand();
                 cmd.CommandText = @"
-                    SELECT 
-                            c.company_bank_id,
-                            c.account_name,
-                            c.bank_name,
-                            c.account_number,
-                            c.ifsc_code,
-                            c.branch_name,
-                            c.account_type,
-                            c.created_by,
-                            u.username AS created_by_name,
-                            c.status,
-                            CONVERT(VARCHAR, c.created_at, 120) AS created_at
-                        FROM CompanyBankAccounts c
-                        LEFT JOIN Tbl_Users u ON u.userid = c.created_by
-                        WHERE c.status = 1
+                                     SELECT 
+    c.company_bank_id,
+    c.account_name,
+    c.bank_name,
+    c.account_number,
+    c.ifsc_code,
+    c.branch_name,
+    c.account_type,
+    c.create_by,
+    u.Username AS created_by_name,
+    c.status,
+    strftime('%Y-%m-%d %H:%M:%S', c.create_at) AS created_at,
+	c.use_on_print as useonprint
+FROM CompanyBankAccounts c
+LEFT JOIN Tbl_Users u ON u.userid = c.create_by
+WHERE c.status = 1;
                     ";
 
                 using var reader = await cmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
+                while (await reader.ReadAsync())
                 {
                     var note = new CompanyBankAccountDto
                     {
@@ -868,11 +1013,12 @@ SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_updated;
                         created_by_name = reader.GetString(8),
                         status = reader.GetInt32(9),
                         created_at = reader.GetString(10),
+                        useonprint = reader.GetInt32(11),
                     };
-                    return note;
+                    result.Add(note);
                 }
 
-                return new CompanyBankAccountDto();
+                return result;
             }
             catch (Exception ex)
             {
@@ -883,6 +1029,59 @@ SELECT CASE WHEN changes() > 0 THEN 1 ELSE 0 END AS is_updated;
                 await connection.CloseAsync();
             }
         }
+
+        public async Task<BankAccountforprintDTO> GetCompanyBankAccountsForPrint()
+        {
+            var connection = sqlConnection.GetConnection();
+
+            try
+            {
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"
+            SELECT 
+                company_bank_id,
+                account_name,
+                bank_name,
+                account_number,
+                ifsc_code,
+                branch_name
+            FROM CompanyBankAccounts
+            WHERE use_on_print = 1;
+        ";
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return new BankAccountforprintDTO
+                    {
+                        company_bank_id = reader.GetInt32(0),
+                        account_name = reader.GetString(1),
+                        bank_name = reader.GetString(2),
+                        account_number = reader.IsDBNull(3) ? null : reader.GetString(3),
+                        ifsc_code = reader.GetString(4),
+                        branch_name = reader.GetString(5),
+                    };
+
+                }
+                else
+                {
+                    return new BankAccountforprintDTO();
+                }
+
+                
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error retrieving company bank accounts for print", ex);
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
+
         #endregion
 
         #region Formate Editor
@@ -1007,6 +1206,35 @@ SELECT last_insert_rowid();
                     jscontent = reader.IsDBNull(2) ? null : reader.GetString(2),   // JsContent
                     schemajson = reader.IsDBNull(3) ? null : reader.GetString(3),   // SchemaJson
                     isdefault = reader.GetInt32(4)                                 // IsDefault
+                };
+
+            }
+
+            return null; // no row found
+        }
+
+        public async Task<HtmlTemplate?> GethtmlContent(int categoryId)
+        {
+            using var connection = sqlConnection.GetConnection();
+            await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+       SELECT HtmlContent, CssContent
+ FROM TemplateMaster
+ WHERE CategoryId = @CategoryId AND IsDefault = 0
+    ";
+
+            cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return new HtmlTemplate
+                {
+                    // numbering (ordinal index)
+                    htmlcontent = reader.IsDBNull(0) ? null : reader.GetString(0),   // HtmlContent
+                    csscontent = reader.IsDBNull(1) ? null : reader.GetString(1),   // CssContent
                 };
 
             }

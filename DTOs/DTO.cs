@@ -272,12 +272,30 @@
         public string? created_by_name { get; set; }
         public int status { get; set; }
         public string? created_at { get; set; }
+        public int? useonprint { get; set; }
+    }
+
+    public class BankAccountforprintDTO
+    {
+        public int company_bank_id { get; set; }
+        public string? account_name { get; set; }
+        public string? bank_name { get; set; }
+        public string? account_number { get; set; }
+        public string? ifsc_code { get; set; }
+        public string? branch_name { get; set; }
+        public string? account_type { get; set; }
+     
     }
     public record TemplateOption
     {
         public int? id { get; set; }       // e.g. 1, 2, 3
         public string? key { get; set; }   // e.g. "receipt", "order", "purchase"
         public string? name { get; set; }  // e.g. "Receipt", "Order", "Purchase"
+    }
+    public record HtmlTemplate
+    {
+        public string? htmlcontent { get; set; }      
+        public string? csscontent { get; set; }  
     }
 
     public class TemplateData

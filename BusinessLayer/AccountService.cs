@@ -337,7 +337,36 @@ namespace FLEXIERP.BusinessLayer
                     };
                     payid = await this.commonmaster.SaveChequePaymentAsync(cheque);
                 }
-                if(payid == 0)
+                else if (settlebalance.paymode == 3)
+                {
+                    SaveBankTransferPaymentDto banktransfer = new SaveBankTransferPaymentDto
+                    {
+                        company_bank_id = settlebalance.banktransfer!.company_bank_id,
+                        transfer_type = settlebalance.banktransfer!.transfer_type,
+                        amount = settlebalance.banktransfer!.amount,
+                        currency = settlebalance.banktransfer!.currency,
+                        charges = settlebalance.banktransfer!.charges,
+                        final_amount_received = settlebalance.banktransfer!.final_amount_received,
+                        transaction_date = settlebalance.banktransfer!.transaction_date,
+                        received_date = settlebalance.banktransfer!.received_date,
+                        posted_date = settlebalance.banktransfer!.posted_date,
+                        status = settlebalance.banktransfer!.status,
+                        is_reconciled = settlebalance.banktransfer!.is_reconciled,
+                        reconciliation_date = settlebalance.banktransfer!.reconciliation_date,
+                        customer_bank_name = settlebalance.banktransfer!.customer_bank_name,
+                        customer_account_number = settlebalance.banktransfer!.customer_account_number,
+                        customer_ifsc = settlebalance.banktransfer!.customer_ifsc,
+                        customer_branch = settlebalance.banktransfer!.customer_branch,
+                        utr_number = settlebalance.banktransfer!.utr_number,
+                        reference_number = settlebalance.banktransfer!.reference_number,
+                        payment_description = settlebalance.banktransfer!.payment_description,
+                        remarks = settlebalance.banktransfer!.remarks,
+                        create_by = (int)settlebalance.createby!,
+                    };
+                    payid = await this.commonmaster.SaveBankTransferPaymentAsync(banktransfer);
+                }
+
+                if (payid == 0)
                 {
                     throw new Exception("Something Went Wrong");
                 }

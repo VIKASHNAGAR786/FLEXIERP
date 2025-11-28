@@ -13,6 +13,7 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
         #endregion
         public Task<int> SaveChequePaymentAsync(SaveChequePaymentDto chequePayment);
         public Task<int> SaveCashPaymentAsync(SaveCashPaymentDto cashPayment);
+        public Task<int> SaveBankTransferPaymentAsync(SaveBankTransferPaymentDto payment);
         public Task<DashboardMetricsDto?> GetDashboardMetricsAsync(string startDate, string endDate);
         public Task<int> SaveUserErrorLogAsync(UserErrorLogDto errorLog);
 
@@ -30,13 +31,16 @@ namespace FLEXIERP.DataAccessLayer_Interfaces
 
         #region Bank Accounts
         public Task<int> SaveCompanyBankAccounts(SaveCompanyBankAccounts bankAccounts);
-        public Task<CompanyBankAccountDto> GetCompanyBankAccounts();
+        public Task<IEnumerable<CompanyBankAccountDto>> GetCompanyBankAccounts();
+
+        public Task<BankAccountforprintDTO> GetCompanyBankAccountsForPrint();
         #endregion
 
         #region Formate Editor
         public Task<List<TemplateOption>> GetTemplates();
         public Task<int> SaveTemplateAsync(SaveTemplate template);
         public Task<TemplateData?> GetTemplateAsync(int categoryId, int isDefault);
+        public Task<HtmlTemplate?> GethtmlContent(int categoryId);
         #endregion
     }
 }

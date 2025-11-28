@@ -20,7 +20,7 @@ namespace FLEXIERP.BusinesLayer_Interfaces
 
         #region Bank Accounts
         public Task<int> SaveCompanyBankAccounts(SaveCompanyBankAccounts bankAccounts);
-        public Task<CompanyBankAccountDto> GetCompanyBankAccounts();
+        public Task<IEnumerable<CompanyBankAccountDto>> GetCompanyBankAccounts();
         #endregion
 
         #region Formate Editor

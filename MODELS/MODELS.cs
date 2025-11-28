@@ -327,23 +327,27 @@ namespace FLEXIERP.MODELS
         public int customerid { get; set; }       // ID of the customer
         public int dueid { get; set; }            // ID of the due entry
         public SaveChequePaymentDto? chequepayment { get; set; } // optional cheque details
+        public SaveBankTransferPaymentDto? banktransfer { get; set; }
         public int? payid { get; set; } // optional cheque details
         public int? createby { get; set; } // optional cheque details
     }
 
     public class SaveCompanyBankAccounts
     {
+        [JsonPropertyName("rowid")]
+        public int? rowid { get; set; } = 0;
+
         [JsonPropertyName("accountname")]
-        public required string accountname { get; set; }
+        public string? accountname { get; set; }
 
         [JsonPropertyName("bankname")]
-        public required string bankname { get; set; }
+        public string? bankname { get; set; }
 
         [JsonPropertyName("accountnumber")]
-        public required string accountnumber { get; set; }
+        public string? accountnumber { get; set; }
 
         [JsonPropertyName("ifsccode")]
-        public required string ifsccode { get; set; }
+        public string? ifsccode { get; set; }
 
         [JsonPropertyName("branchname")]
         public string? branchname { get; set; }
@@ -352,6 +356,7 @@ namespace FLEXIERP.MODELS
         public string? accounttype { get; set; } = "CURRENT";
 
         public int? CreateBy { get; set; }
+        public int? useonprint { get; set; }
 
     }
 
@@ -371,6 +376,52 @@ namespace FLEXIERP.MODELS
         public DateTime createdat { get; set; } = DateTime.Now;
         public DateTime updatedat { get; set; } = DateTime.Now;
         public int version { get; set; } = 1;
+    }
+
+    public class SaveBankTransferPaymentDto
+    {
+        public int company_bank_id { get; set; }
+
+        public string transfer_type { get; set; } = string.Empty;
+
+        public decimal amount { get; set; }
+
+        public string? currency { get; set; } = "INR";
+
+        public decimal? charges { get; set; } = 0;
+
+        public decimal? final_amount_received { get; set; }
+
+        public DateTime transaction_date { get; set; }
+
+        public DateTime? received_date { get; set; }
+
+        public DateTime? posted_date { get; set; }
+
+        public string? status { get; set; } = "Pending";
+
+        public bool is_reconciled { get; set; } = false;
+
+        public DateTime? reconciliation_date { get; set; }
+
+        public string? customer_bank_name { get; set; }
+
+        public string? customer_account_number { get; set; }
+
+        public string? customer_ifsc { get; set; }
+
+        public string? customer_branch { get; set; }
+
+        public string utr_number { get; set; } = string.Empty;
+
+        public string? reference_number { get; set; }
+
+        public string? payment_description { get; set; }
+
+        public string? remarks { get; set; } = " ";
+
+        public int? create_by { get; set; }
+
     }
 
 }

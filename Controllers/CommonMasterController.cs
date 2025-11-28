@@ -211,7 +211,7 @@ namespace FLEXIERP.Controllers
                 if (userid == null)
                     return Unauthorized("User ID not found in token.");
 
-                var result = await commonservice.GetCompanyBankAccounts();
+                IEnumerable<CompanyBankAccountDto> result = await commonservice.GetCompanyBankAccounts();
                 return Ok(result);
             }
             catch (Exception ex)

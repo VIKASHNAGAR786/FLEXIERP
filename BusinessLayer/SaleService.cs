@@ -14,6 +14,7 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using QuestPDF.Previewer;
 using SelectPdf;
+using System.Text;
 
 
 namespace FLEXIERP.BusinessLayer
@@ -296,15 +297,16 @@ namespace FLEXIERP.BusinessLayer
         #endregion
 
         #region Sale Invoice
+
         public async Task<byte[]> GetReceiptPdf(int saleId, int userId)
         {
             // --- Fetch data ---
-            var receipt = await _saleRepo.GetReceiptDetail(saleId);
-            var company = await accountRepo.GetCompanyInfoByUserAsync(userId);
-
+            ReceiptDTO? receipt = await _saleRepo.GetReceiptDetail(saleId);
             if (receipt == null || receipt.CustomerInfo == null)
                 throw new Exception("Receipt data not found.");
+            BankAccountforprintDTO bankdata = await this.commonmaster.GetCompanyBankAccountsForPrint();
 
+            var company = await accountRepo.GetCompanyInfoByUserAsync(userId);
             var customer = receipt.CustomerInfo;
             var details = receipt.SaleDetails;
             var extracharges = receipt.extracharges;
@@ -313,141 +315,151 @@ namespace FLEXIERP.BusinessLayer
             decimal extraTotal = extracharges?.Sum(e => e.chargeamount) ?? 0;
             decimal grandTotal = subTotal + extraTotal;
 
-            // --- Create PDF ---
-            var document = Document.Create(container =>
+            HtmlTemplate? htmladdons = await this.commonmaster.GethtmlContent(1);
+
+            if (htmladdons is null)
+                throw new Exception("No template found.");
+
+            // --- Build Sale Details Table ---
+            var sb = new StringBuilder();
+            int index = 1;
+
+            // Table start
+            sb.AppendLine("<table style='width:100%; border-collapse:collapse; font-size:12px;'>");
+            sb.AppendLine("<thead><tr style='background:#f0f0f0;'>");
+            sb.AppendLine("<th style='border:1px solid #ccc;'>NO.</th>");
+            sb.AppendLine("<th style='border:1px solid #ccc;'>DESCRIPTION OF GOODS</th>");
+            sb.AppendLine("<th style='border:1px solid #ccc;'>QUANTITY</th>");
+            sb.AppendLine("<th style='border:1px solid #ccc;'>AMOUNT</th>");
+            sb.AppendLine("<th style='border:1px solid #ccc;'>TOTAL AMOUNT</th>");
+            sb.AppendLine("</tr></thead><tbody>");
+
+            // Sale items
+            foreach (var d in details)
             {
-                container.Page(page =>
+                sb.AppendLine("<tr>");
+                sb.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'>{index}</td>");
+                sb.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'>{d.ProductName}</td>");
+                sb.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'>{d.Quantity}</td>");
+                sb.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'>{d.Price:N2}</td>");
+                sb.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'>{d.TotalAmount:N2}</td>");
+                sb.AppendLine("</tr>");
+                index++;
+            }
+
+            // Grand total
+            sb.AppendLine("<tr>");
+            sb.AppendLine("<td colspan='4' style='border:1px solid #ccc; text-align:right;'><b> TOTAL </b></td>");
+            sb.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'><b>{details.Sum(d => d.TotalAmount):N2}</b></td>");
+            sb.AppendLine("</tr>");
+
+            sb.AppendLine("</tbody></table>");
+
+            string saleDetailsTable = sb.ToString();
+
+            //Extra Charges 
+            var sbExtra = new StringBuilder();
+            int chargeIndex = 1;
+
+            sbExtra.AppendLine("<table style='width:100%; border-collapse:collapse; font-size:12px; margin-top:20px;'>");
+            sbExtra.AppendLine("<thead><tr style='background:#f0f0f0;'>");
+            sbExtra.AppendLine("<th style='border:1px solid #ccc;'>NO.</th>");
+            sbExtra.AppendLine("<th style='border:1px solid #ccc;' colspan='3'>CHARGE NAME</th>");
+            sbExtra.AppendLine("<th style='border:1px solid #ccc;'>AMOUNT</th>");
+            sbExtra.AppendLine("</tr></thead><tbody>");
+
+            if (extracharges != null && extracharges.Any())
+            {
+                foreach (var charge in extracharges)
                 {
-                    page.Size(PageSizes.A4);
-                    page.Margin(20);
-                    page.DefaultTextStyle(TextStyle.Default.FontSize(10));
+                    sbExtra.AppendLine("<tr>");
+                    sbExtra.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'>{chargeIndex}</td>");
+                    sbExtra.AppendLine($"<td colspan='3' style='border:1px solid #ccc;'>{charge.chargename}</td>");
+                    sbExtra.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'>{charge.chargeamount:N2}</td>");
+                    sbExtra.AppendLine("</tr>");
+                    chargeIndex++;
+                }
 
-                    // ---------------- HEADER (Red Banner) ----------------
-                    page.Header().Column(col =>
-                    {
-                        col.Item().Background("#cc0000").Padding(10).AlignCenter().Column(h =>
-                        {
-                            h.Item().Text(company.CompanyName.ToUpper())
-                                .FontSize(18).Bold().FontColor("#ffffff");
+                // Total of extra charges
+                sbExtra.AppendLine("<tr>");
+                sbExtra.AppendLine("<td colspan='4' style='border:1px solid #ccc; text-align:right;'><b>EXTRA CHARGES TOTAL</b></td>");
+                sbExtra.AppendLine($"<td style='border:1px solid #ccc; text-align:center;'><b>{extracharges.Sum(c => c.chargeamount):N2}</b></td>");
+                sbExtra.AppendLine("</tr>");
+            }
+            else
+            {
+                sbExtra.AppendLine("<tr>");
+                sbExtra.AppendLine("<td colspan='5' style='border:1px solid #ccc; text-align:center;'>No extra charges</td>");
+                sbExtra.AppendLine("</tr>");
+            }
 
-                            h.Item().Text(company.Address ?? "")
-                                .FontSize(9).FontColor("#ffffff");
+            sbExtra.AppendLine("</tbody></table>");
 
-                            h.Item().Text($"MOBILE: {company.ContactNo}   EMAIL: {company.Email}")
-                                .FontSize(9).FontColor("#ffffff");
-                        });
+            string extraChargesTable = sbExtra.ToString();
 
-                        col.Item().PaddingTop(5).AlignCenter()
-                            .Text("INVOICE").FontSize(14).Bold();
-                    });
+            // --- Replace placeholders in template ---
+            string html = htmladdons.htmlcontent!
+                .Replace("{{CustomerName}}", customer.CustomerName)
+                .Replace("{{PhoneNo}}", customer.PhoneNo)
+                .Replace("{{Email}}", customer.Email)
+                .Replace("{{PaymentMode}}", customer.PaymentMode)
+                .Replace("{{Remark}}", customer.Remark)
+                .Replace("{{TotalItems}}", customer.TotalItems.ToString())
+                .Replace("{{TotalAmount}}", customer.TotalAmount.ToString("N2"))
+                .Replace("{{TotalDiscount}}", customer.TotalDiscount.ToString("N2"))
+                .Replace("{{paidamt}}", customer.paidamt.ToString("N2"))
+                .Replace("{{baldue}}", customer.baldue.ToString("N2"))
+                .Replace("{{invoiceno}}", customer.invoiceno)
+                .Replace("{{CompanyName}}", company.CompanyName)
+                .Replace("{{CompanyEmail}}", company.Email)
+                .Replace("{{ContactNo}}", company.ContactNo)
+                .Replace("{{WhatsAppNo}}", company.WhatsAppNo)
+                .Replace("{{Address}}", company.Address)
+                .Replace("{{FullName}}", company.FullName)
+                .Replace("{{CompanyLogo}}", $"<img src='{company.CompanyLogo}' height='60' />")
+                .Replace("{{SaleDetailsTable}}", saleDetailsTable)
+                .Replace("{{ExtraCharges}}", extraChargesTable)
+                .Replace("{{AccountName}}", bankdata.account_name)
+                .Replace("{{BankName}}", bankdata.bank_name)
+                .Replace("{{AccountNumber}}", bankdata.account_number)
+                .Replace("{{IFSCCode}}", bankdata.ifsc_code)
+                .Replace("{{InvoiceDate}}", DateTime.Now.ToString("hh:mm tt"))
+                .Replace("{{BranchName}}", bankdata.branch_name);
 
-                    // ---------------- CUSTOMER INFO BOX ----------------
-                    page.Content().Column(content =>
-                    {
-                        // 3 Column box
-                        content.Item().Table(t =>
-                        {
-                            t.ColumnsDefinition(c =>
-                            {
-                                c.RelativeColumn(2);
-                                c.RelativeColumn(2);
-                                c.RelativeColumn(1);
-                            });
+            // --- Wrap with CSS ---
+            string fullHtml = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        {htmladdons.csscontent}
+        body {{ font-family: Arial, sans-serif; font-size: 12px; }}
+        h1,h2,h3 {{ margin: 0; }}
+    </style>
+</head>
+<body>
+    {html}
+    <footer style='text-align:center;margin-top:20px;font-size:10px'>
+        Thank you for your business!
+    </footer>
+</body>
+</html>";
 
-                            // Row 1
-                            t.Cell().Border(1).Padding(5).Text($"COSTUMER NAME\n{customer.CustomerName}").Bold();
-                            t.Cell().Border(1).Padding(5).Text($"INVOICE DATE\n{DateTime.Now}").Bold();
-                            t.Cell().Border(1).Padding(5).Text($"INVOICE NO.\n{customer.invoiceno}").Bold();
-                        });
+            // --- Convert to PDF ---
+            HtmlToPdf converter = new HtmlToPdf();
+            converter.Options.MarginTop = 20;
+            converter.Options.MarginBottom = 20;
+            converter.Options.MarginLeft = 15;
+            converter.Options.MarginRight = 15;
 
-                        content.Item().PaddingVertical(8);
+            PdfDocument doc = converter.ConvertHtmlString(fullHtml);
+            using var ms = new MemoryStream();
+            doc.Save(ms);
+            doc.Close();
 
-                        // ---------------- SALE DETAILS TABLE ----------------
-                        // ---------------- SALE DETAILS TABLE ----------------
-                        content.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c =>
-                            {
-                                c.ConstantColumn(30);     // Sr No
-                                c.RelativeColumn(4);      // Description
-                                c.RelativeColumn(2);      // Qty
-                                c.RelativeColumn(2);      // Amount
-                                c.RelativeColumn(2);      // Total
-                            });
-
-                            // Header row
-                            table.Header(h =>
-                            {
-                                HeaderCell(h, "NO.");
-                                HeaderCell(h, "DESCRIPTION OF GOODS");
-                                HeaderCell(h, "QUANTITY");
-                                HeaderCell(h, "AMOUNT");
-                                HeaderCell(h, "TOTAL AMOUNT");
-                            });
-
-                            int index = 1;
-
-                            foreach (var d in details)
-                            {
-                                table.Cell().Border(1).Padding(4).AlignCenter().Text(index.ToString());
-                                table.Cell().Border(1).Padding(4).Text(d.ProductName);
-                                table.Cell().Border(1).Padding(4).AlignCenter().Text(d.Quantity.ToString());
-                                table.Cell().Border(1).Padding(4).AlignCenter().Text(d.Price.ToString("N2"));
-                                table.Cell().Border(1).Padding(4).AlignCenter().Text(d.TotalAmount.ToString("N2"));
-                                index++;
-                            }
-
-                            // ---- ADD MINIMUM 3 EMPTY ROWS ----
-                            int blankRows = Math.Max(0, 8 - details.Count);
-
-                            for (int i = 0; i < blankRows; i++)
-                            {
-                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
-                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
-                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
-                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
-                                table.Cell().Border(1).MinHeight(22).Padding(4).Text(" ");
-                            }
-                            if (extracharges is not null)
-                            {
-                                foreach (var charges in extracharges)
-                                {
-                                    table.Cell().Border(1).Padding(4).AlignCenter().Text("");
-                                    table.Cell().Border(1).Padding(4).Text("").Bold();
-                                    table.Cell().Border(1).Padding(4).Text("");
-                                    table.Cell().Border(1).Padding(4).Text(charges.chargename).Bold();
-                                    table.Cell().Border(1).Padding(4).AlignCenter().Text(@$"{charges.chargeamount.ToString()}");
-                                }
-                            }
-                            table.Cell().Border(1).Padding(4).AlignCenter().Text("");
-                            table.Cell().Border(1).Padding(4).Text("TOTAL QUANTITY").Bold();
-                            table.Cell().Border(1).Padding(4).Text("");
-                            table.Cell().Border(1).Padding(4).Text("").Bold();
-                            table.Cell().Border(1).Padding(4).Text("");
-
-                            // -------- GRAND TOTAL ROW --------
-                            table.Cell().ColumnSpan(4).Border(1).Padding(5).AlignRight().Text("GRAND TOTAL").Bold();
-                            table.Cell().Border(1).Padding(5).AlignCenter().Text(grandTotal.ToString("N2")).Bold();
-                        });
-
-                    });
-
-                    page.Footer().AlignCenter().PaddingTop(10)
-                        .Text("Thank you for your business!").FontSize(9);
-                });
-            });
-
-            // helper
-           
-            return document.GeneratePdf();
+            return ms.ToArray();
         }
-
-        static void HeaderCell(QuestPDF.Fluent.TableCellDescriptor h, string text)
-        {
-            h.Cell().Background("#e6e6e6").Border(1).Padding(5)
-                .Text(text).Bold().AlignCenter();
-        }
-
         #endregion
     }
 }
