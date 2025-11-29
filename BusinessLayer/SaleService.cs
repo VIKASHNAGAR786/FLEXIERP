@@ -70,6 +70,34 @@ namespace FLEXIERP.BusinessLayer
                     };
                     payid = await this.commonmaster.SaveChequePaymentAsync(cheque);
                 }
+                else if (sale.Customer.PaymentMode == 3)
+                {
+                    SaveBankTransferPaymentDto banktransfer = new SaveBankTransferPaymentDto
+                    {
+                        company_bank_id = sale.Customer.banktransfer!.company_bank_id,
+                        transfer_type = sale.Customer.banktransfer!.transfer_type,
+                        amount = sale.Customer.banktransfer!.amount,
+                        currency = sale.Customer.banktransfer!.currency,
+                        charges = sale.Customer.banktransfer!.charges,
+                        final_amount_received = sale.Customer.banktransfer!.final_amount_received,
+                        transaction_date = sale.Customer.banktransfer!.transaction_date,
+                        received_date = sale.Customer.banktransfer!.received_date,
+                        posted_date = sale.Customer.banktransfer!.posted_date,
+                        status = sale.Customer.banktransfer!.status,
+                        is_reconciled = sale.Customer.banktransfer!.is_reconciled,
+                        reconciliation_date = sale.Customer.banktransfer!.reconciliation_date,
+                        customer_bank_name = sale.Customer.banktransfer!.customer_bank_name,
+                        customer_account_number = sale.Customer.banktransfer!.customer_account_number,
+                        customer_ifsc = sale.Customer.banktransfer!.customer_ifsc,
+                        customer_branch = sale.Customer.banktransfer!.customer_branch,
+                        utr_number = sale.Customer.banktransfer!.utr_number,
+                        reference_number = sale.Customer.banktransfer!.reference_number,
+                        payment_description = sale.Customer.banktransfer!.payment_description,
+                        remarks = sale.Customer.banktransfer!.remarks,
+                        create_by = (int)sale.CreatedBy!,
+                    };
+                    payid = await this.commonmaster.SaveBankTransferPaymentAsync(banktransfer);
+                }
                 sale.Customer.payid = payid;
             }
             sale.invoiceno = await this.commonmaster.GetInvoiceNumber();

@@ -1090,8 +1090,8 @@ WHERE c.status = 1;
             var templates = new List<TemplateOption>
     {
         new TemplateOption { id = 1, key = "receipt",  name = "Receipt" },
-        new TemplateOption { id = 2, key = "orderreceipt", name = "Order" },
-        new TemplateOption { id = 3, key = "purchase", name = "Purchase" }
+        //new TemplateOption { id = 2, key = "orderreceipt", name = "Order" },
+        //new TemplateOption { id = 3, key = "purchase", name = "Purchase" }
     };
 
             return await Task.FromResult(templates);

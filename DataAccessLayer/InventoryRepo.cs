@@ -202,12 +202,31 @@ namespace FLEXIERP.DataAccessLayer
                         nextProductId = Convert.ToInt32(seqResult);
                 }
 
-                // Step 2: Generate BarCode YY0CC0PPP
-                string currentYear = DateTime.UtcNow.ToString("yy");
-                string categoryCode = product.ProductCategory.ToString().PadLeft(2, '0');
-                string sequenceNumber = nextProductId.ToString().PadLeft(3, '0');
-                string barcode = $"{currentYear}0{categoryCode}0{sequenceNumber}";
+                // Step 2: Generate BarCode YYMM0CC0PPP + CheckDigit
+                string currentYear = DateTime.UtcNow.ToString("yy");          // 2 digits
+                string currentMonth = DateTime.UtcNow.ToString("MM");         // 2 digits
+                string categoryCode = product.ProductCategory.ToString().PadLeft(2, '0'); // 2 digits
+                string sequenceNumber = nextProductId.ToString().PadLeft(3, '0');         // 3 digits
 
+                // Base barcode = 2+2+1+2+1+3 = 11 digits
+                string baseBarcode = $"{currentYear}{currentMonth}0{categoryCode}0{sequenceNumber}";
+
+                // Add a simple check digit (mod 10 of sum of digits)
+                int sum = baseBarcode.Sum(c => c - '0');
+                int checkDigit = sum % 10;
+
+                // Final 12-digit barcode
+                string barcode = $"{baseBarcode}{checkDigit}";
+
+                // Enforce exactly 12 digits (never less, never more)
+                if (barcode.Length < 12)
+                {
+                    barcode = barcode.PadRight(12, '0');   // pad with zeros if shorter
+                }
+                else if (barcode.Length > 12)
+                {
+                    barcode = barcode.Substring(0, 12);    // trim if longer
+                }
                 // Step 3: Insert into Product table
                 using (var insertCmd = connection.CreateCommand())
                 {

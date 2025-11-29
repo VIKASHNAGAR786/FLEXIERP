@@ -232,6 +232,7 @@ namespace FLEXIERP.MODELS
         public int? payid { get; set; }    // @payid
 
         public SaveChequePaymentDto? chequepayment { get; set; }
+        public SaveBankTransferPaymentDto? banktransfer { get; set; }
     }
     public class SaleDetail
     {

@@ -615,23 +615,23 @@ LIMIT @PageSize OFFSET @Offset;
                 using (var cmd = connection.CreateCommand())
                 {
                     cmd.CommandText = @"
-                SELECT 
-                    cs.CustomerName,
-                    cs.PhoneNo,
-                    cs.Email,
-                    CASE cs.PaymentMode
-                        WHEN 1 THEN 'Cash'
-                        WHEN 2 THEN 'UPI'
-                        WHEN 3 THEN 'Card'
-                        ELSE 'Other'
-                    END AS PaymentMode,
-                    cs.Remark,
-                    sale.TotalItems,
-                    ROUND(sale.TotalAmount, 2) AS TotalAmount,
-                    ROUND(sale.TotalDiscount, 2) AS TotalDiscount,
-                    IFNULL(cl.paid_amt, 0) AS paid_amt,
-                    IFNULL(cl.Balance_Due, 0) AS Balance_Due,
-	                sale.invoice_no
+            SELECT 
+                 cs.CustomerName,
+                 cs.PhoneNo,
+                 cs.Email,
+                 CASE cl.payment_mode
+                     WHEN 1 THEN 'Cash'
+                     WHEN 2 THEN 'UPI'
+                     WHEN 3 THEN 'Bank Transfer'
+                     ELSE 'Other'
+                 END AS PaymentMode,
+                 cs.Remark,
+                 sale.TotalItems,
+                 ROUND(sale.TotalAmount, 2) AS TotalAmount,
+                 ROUND(sale.TotalDiscount, 2) AS TotalDiscount,
+                 IFNULL(cl.paid_amt, 0) AS paid_amt,
+                 IFNULL(cl.Balance_Due, 0) AS Balance_Due,
+                 sale.invoice_no
                 FROM Sale AS sale
                 LEFT JOIN Customer AS cs ON sale.CustomerID = cs.CustomerID
                 LEFT JOIN Customer_ledger AS cl 
